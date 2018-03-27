@@ -354,21 +354,20 @@ class Server
     private static void buildSendPacket()
     {
         mutex.WaitOne();
+        int offset = R.Net.Offset.PLAYERS;
+
         foreach (KeyValuePair<byte, connectionData> pair in players)
         {
             byte id = pair.Key;
             connectionData player = pair.Value;
 
-            int offset = R.Net.Offset.PLAYERS;
-            // Find the existing player in the array
-            while (sendBuffer[offset] != id)
-            {
-                offset += R.Net.Size.PLAYER_DATA;
-            }
+            sendBuffer[offset] = id;
+            Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
+            Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
+            Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
+            // Weapon here
 
-            Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset, 4);
-            Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 4, 4);
-            Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 8, 4);
+            offset += 14;
         }
         mutex.ReleaseMutex();
     }
@@ -459,20 +458,10 @@ class Server
         float z = BitConverter.ToSingle(inBuffer, R.Net.Offset.Z);
         float r = BitConverter.ToSingle(inBuffer, R.Net.Offset.R);
 
-        int offset = R.Net.Offset.PLAYERS;
-        // Find the existing player in the array
-        while (sendBuffer[offset] != id)
-        {
-            offset += R.Net.Size.PLAYER_DATA;
-        }
-
         mutex.WaitOne();
         players[id].x = x;
         players[id].z = z;
         players[id].r = r;
-        Array.Copy(inBuffer, R.Net.Offset.X, sendBuffer, offset, 4);
-        Array.Copy(inBuffer, R.Net.Offset.Z, sendBuffer, offset + 4, 4);
-        Array.Copy(inBuffer, R.Net.Offset.R, sendBuffer, offset + 8, 4);
         mutex.ReleaseMutex();
     }
 
