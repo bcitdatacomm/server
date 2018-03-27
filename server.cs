@@ -359,14 +359,16 @@ class Server
             byte id = pair.Key;
             connectionData player = pair.Value;
 
-            int positionOffset = (R.Net.Offset.PLAYER_POSITIONS + (id * 8)) - 8;
-            int rotationOffset = (R.Net.Offset.PLAYER_ROTATIONS + (id * 4)) - 4;
+            int offset = R.Net.Offset.PLAYERS;
+            // Find the existing player in the array
+            while (sendBuffer[offset] != id)
+            {
+                offset += R.Net.Size.PLAYER_DATA;
+            }
 
-            sendBuffer[R.Net.Offset.PLAYER_IDS + id - 1] = id;
-
-            Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, positionOffset, 4);
-            Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, positionOffset + 4, 4);
-            Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, rotationOffset, 4);
+            Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset, 4);
+            Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 4, 4);
+            Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 8, 4);
         }
         mutex.ReleaseMutex();
     }
@@ -457,16 +459,20 @@ class Server
         float z = BitConverter.ToSingle(inBuffer, R.Net.Offset.Z);
         float r = BitConverter.ToSingle(inBuffer, R.Net.Offset.R);
 
-        int positionOffset = (R.Net.Offset.PLAYER_POSITIONS + (id * 8)) - 8;
-        int rotationOffset = (R.Net.Offset.PLAYER_ROTATIONS + (id * 4)) - 4;
+        int offset = R.Net.Offset.PLAYERS;
+        // Find the existing player in the array
+        while (sendBuffer[offset] != id)
+        {
+            offset += R.Net.Size.PLAYER_DATA;
+        }
 
         mutex.WaitOne();
         players[id].x = x;
         players[id].z = z;
         players[id].r = r;
-        Array.Copy(inBuffer, R.Net.Offset.X, sendBuffer, positionOffset, 4);
-        Array.Copy(inBuffer, R.Net.Offset.Z, sendBuffer, positionOffset + 4, 4);
-        Array.Copy(inBuffer, R.Net.Offset.R, sendBuffer, rotationOffset, 4);
+        Array.Copy(inBuffer, R.Net.Offset.X, sendBuffer, offset, 4);
+        Array.Copy(inBuffer, R.Net.Offset.Z, sendBuffer, offset + 4, 4);
+        Array.Copy(inBuffer, R.Net.Offset.R, sendBuffer, offset + 8, 4);
         mutex.ReleaseMutex();
     }
 
@@ -474,18 +480,41 @@ class Server
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
 
-        int positionOffset = (R.Net.Offset.PLAYER_POSITIONS + (id * 8)) - 8;
+        // Creates the player init packet
+        server.Send(ep, newPlayer, R.Net.Size.SERVER_TICK);
 
-        buffer[0] = 0;
-        buffer[R.Net.Offset.PLAYER_IDS] = id;
-        Array.Copy(BitConverter.GetBytes(x), 0, buffer, positionOffset, 4);
-        Array.Copy(BitConverter.GetBytes(z), 0, buffer, positionOffset + 4, 4);
+        buffer[0] = R.Net.Header.INIT_PLAYER;
+        buffer[1] = id;
+        int offset = 2;
+
+        // sets the coordinates for the new player
+        Array.Copy(BitConverter.GetBytes(x), 0, buffer, offset, 4);
+        Array.Copy(BitConverter.GetBytes(z), 0, buffer, offset + 4, 4);
 
         mutex.WaitOne();
         DotNet.EndPoint ep = players[id].ep;
         mutex.ReleaseMutex();
 
         server.Send(ep, buffer, buffer.Length);
+
+        mutex.WaitOne();
+
+        // Find the offset to add the player to sendBuffer
+        offset = R.Net.Offset.PLAYERS;
+        while (sendBuffer[offset] != 0)
+        {
+            offset += R.Net.Size.PLAYER_DATA;
+        }
+
+        // Sets the player ID
+        sendBuffer[offset] = id;
+        offset++;
+
+        // sets the coordinates for each player connected
+        Array.Copy(BitConverter.GetBytes(x), 0, sendBuffer, offset, 4);
+        Array.Copy(BitConverter.GetBytes(z), 0, sendBuffer, offset + 4, 4);
+
+        mutex.ReleaseMutex();
     }
 
     private static void LogError(string s)
