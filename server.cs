@@ -480,9 +480,6 @@ class Server
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
 
-        // Creates the player init packet
-        server.Send(ep, newPlayer, R.Net.Size.SERVER_TICK);
-
         buffer[0] = R.Net.Header.INIT_PLAYER;
         buffer[1] = id;
         int offset = 2;
