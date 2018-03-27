@@ -268,7 +268,7 @@ namespace DotNet
 
 class Server
 {
-    private const double tickInterval = (double)1000 / (double)64;
+    private const double tickInterval = (double)1000 / (double)128;
     private static DateTime nextTick = DateTime.Now;
     private static Thread sendThread;
     private static Thread recvThread;
