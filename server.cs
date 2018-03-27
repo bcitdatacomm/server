@@ -351,10 +351,36 @@ class Server
         return;
     }
 
+    private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
+    {
+        byte tmp = 0;
+        
+        if (hasPlayer)
+        {
+            tmp += 128;
+        }
+
+        if (hasBullet)
+        {
+            tmp += 64;
+        }
+
+        if (hasWeapon)
+        {
+            tmp += 32;
+        }
+
+        tmp += Convert.ToByte(players);
+
+        return tmp;
+    }
+
     private static void buildSendPacket()
     {
         mutex.WaitOne();
         int offset = R.Net.Offset.PLAYERS;
+
+        sendBuffer[0] = generateTickPacketHeader(true, false, false, players.Count);
 
         foreach (KeyValuePair<byte, connectionData> pair in players)
         {
