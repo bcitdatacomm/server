@@ -2,9 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using System.Net;
-using System.Net.Sockets;
-
+// using System.Net;
+// using System.Net.Sockets;
+using Networking;
+using InitGuns;
 
 class Server
 {
@@ -16,7 +17,7 @@ class Server
     private static Mutex mutex;
 
 
-    private static DotNet.Server server;
+    private static Networking.Server server;
 
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
 
@@ -25,11 +26,26 @@ class Server
 
     static float spawnPoint = 1.0f;
 
+
+    // Game geneartion variables
+    private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
+    private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
+    private static Thread listenThread;
+    private static byte[] itemData  = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static byte[] mapData   = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static Int32 numClients = 0;
+    private static EndPoint connectionEp;
+    private static bool accepting = false;
+    private static TCPServer tcpServer;
+
     public static void Main()
     {
         Console.WriteLine("Starting server");
+        mutex = new Mutex();
 
         pregame();
+
+        generateInitData();
 
         startGame();
     }
@@ -42,10 +58,8 @@ class Server
 
     public static void startGame()
     {
-        server = new DotNet.Server();
+        server = new Networking.Server();
         server.Init(R.Net.PORT);
-
-        mutex = new Mutex();
 
         sendThread = new Thread(sendThreadFunction);
         recvThread = new Thread(recvThreadFunction);
@@ -80,7 +94,7 @@ class Server
                 buildSendPacket();
 
                 byte[] snapshot = new byte[sendBuffer.Length];
-                Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length)
+                Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
 
                 mutex.WaitOne();
                 foreach (KeyValuePair<byte, connectionData> pair in players)
@@ -97,7 +111,7 @@ class Server
     private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
     {
         byte tmp = 0;
-        
+
         if (hasPlayer)
         {
             tmp += 128;
@@ -159,7 +173,7 @@ class Server
                     }
 
                     // Prepare to receive
-                    DotNet.EndPoint ep = new DotNet.EndPoint();
+                    EndPoint ep = new EndPoint();
                     byte[] recvBuffer = new byte[R.Net.Size.CLIENT_TICK];
 
                     // Receive
@@ -181,7 +195,7 @@ class Server
         return;
     }
 
-    private static void handleBuffer(byte[] inBuffer, DotNet.EndPoint ep)
+    private static void handleBuffer(byte[] inBuffer, EndPoint ep)
     {
         switch (inBuffer[0])
         {
@@ -195,11 +209,12 @@ class Server
         }
     }
 
-    private static void addNewPlayer(DotNet.EndPoint ep)
+    private static void addNewPlayer(EndPoint ep)
     {
         mutex.WaitOne();
-        players[newPlayer.id] = new connectionData(ep, nextPlayerId++, spawnPoint * 5, spawnPoint * 5);
+        players[nextPlayerId] = new connectionData(ep, nextPlayerId, spawnPoint * 5, spawnPoint * 5);
         spawnPoint++;
+        nextPlayerId++;
         mutex.ReleaseMutex();
     }
 
@@ -230,7 +245,7 @@ class Server
         Array.Copy(BitConverter.GetBytes(z), 0, buffer, offset + 4, 4);
 
         mutex.WaitOne();
-        DotNet.EndPoint ep = players[id].ep;
+        EndPoint ep = players[id].ep;
         mutex.ReleaseMutex();
 
         server.Send(ep, buffer, buffer.Length);
@@ -254,6 +269,73 @@ class Server
 
         mutex.ReleaseMutex();
     }
+
+    private static void initTCPServer()
+    {
+        tcpServer = new TCPServer();
+        tcpServer.Init(R.Net.PORT);
+        listenThread = new Thread(listenThreadFunc);
+        listenThread.Start();
+        listenThread.Join();
+    }
+
+
+    private static void generateInitData()
+    {
+        InitRandomGuns getItems = new InitRandomGuns(R.Net.MAX_PLAYERS);
+        itemData = getItems.compressedpcktarray;
+
+        TerrainController tc = new TerrainController();
+        while (!tc.GenerateEncoding());
+        int terrainDataLength = tc.CompressedData.Length;
+        Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
+    }
+
+    private static void listenThreadFunc()
+    {
+        Int32 clientsockfd;
+        accepting = true;
+        //Int32 result;
+		Networking.EndPoint ep = new Networking.EndPoint ();
+
+        while (accepting && numClients < R.Net.MAX_PLAYERS)
+        {
+			clientsockfd = tcpServer.AcceptConnection(ref ep);
+            if (clientsockfd <= 0)
+            {
+                LogError("Accept error: " + clientsockfd);
+            }
+            else
+            {
+                clientSockFdArr[numClients] = clientsockfd;
+                addNewPlayer(ep);
+                LogError("Connected client: " + ep.ToString()); //Add toString() for EndPoint
+                numClients++;
+            }
+        }
+
+        // Intialize and start transmit threads
+        for (int i = 0; i < numClients; i++)
+        {
+            transmitThreadArr[i] = new Thread(transmitThreadFunc);
+            transmitThreadArr[i].Start(clientSockFdArr[i]);
+        }
+    }
+
+    private static void transmitThreadFunc(object clientsockfd)
+    {
+        Int32 numSentMap;
+        Int32 numSentItem;
+        Int32 sockfd = (Int32)clientsockfd;
+
+		numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
+        LogError("Num Item Bytes Sent: " + numSentItem);
+		numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
+        LogError("Num Map Bytes Sent: " + numSentMap);
+
+        tcpServer.CloseClientSocket(sockfd);
+    }
+
 
     private static void LogError(string s)
     {

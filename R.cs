@@ -1,17 +1,24 @@
+using System;
+
 ﻿namespace R
 {
     // Contains all the constants associated with networking and the packet
     public static class Net
     {
         public const ushort PORT = 42069;
-
+        public const Int32 TCP_BUFFER_SIZE = 8192;
+		public const ushort MAX_PLAYERS = 30;
 
         // Contains constants associated with the header type of the packet
         public static class Header
         {
             public const byte INIT_PLAYER = 0;
-            public const byte NEW_CLIENT = 69;
             public const byte TICK = 85;
+            public const byte NEW_CLIENT = 69;
+            public const byte ACK = 170;
+
+			public const byte TERRAIN_DATA = 55;
+			public const byte SPAWN_DATA = 56;
         }
 
         // Contains constants associated with the packet offset or distance into the packet
@@ -73,7 +80,25 @@
         // Terrain Constants
         public static class Terrain
         {
-
+            // Define default constants
+            public const long DEFAULT_WIDTH = 1000;
+            public const long DEFAULT_LENGTH = 1000;
+            public const long DEFAULT_TILE_SIZE = 20;
+            public const long DEFAULT_COLLIDER_SIZE = 20;
+            // For the gun objects
+            public const int GUN_OBJECT_SIZE = 13;
+            public const int ID_BYTE_SIZE = 4;
+            public const int X_BYTE_SIZE = 4;
+            public const int Z_BYTE_SIZE = 4;
+            public const int ID_OFFSET = 1;
+            public const int X_OFFSET = 5;
+            public const int Z_OFFSET = 9;
+            // Changed to a percentage - ALam
+            public const float DEFAULT_CACTUS_PERC = 0.9997f;
+            public const float DEFAULT_BUSH_PERC = 0.9995f;
+            public const float DEFAULT_BUILDING_PERC = 0.9999f;
+            // Terrain name
+            public const string DEFAULT_NAME = "Terrain";
         }
 
         // Player Constants
@@ -81,5 +106,38 @@
         {
 
         }
+
+    }
+    public static class Init
+    {
+        public const int PLAYERMULT = 2;
+        public const int WEAPONOFFSETID = 1;
+        public const int WEAPONOFFSETX = 5;
+        public const int WEAPONOFFSETZ = 9;
+        public const int COORDBYTES = 4;
+        public const int IDBYTES = 4;
+        public const int INDWPNPCKT = 13;
+        public const int QUOTIENTTOWNGUNS = 4;
+        public const int CLUSTERING = 50;
+        public const int TOWNHEIGHT = 500;
+        public const int TOWNWIDTH = 500;
+        public const int OCCURANCESQUARE = 12;
+        public const int WPN1 = 1;
+        public const int WPN2 = 2;
+        public const int WPN3 = 3;
+        public const int WPN4 = 4;
+        public const int WPN5 = 5;
+        public const int WPN6 = 6;
+        public const int WPN7 = 7;
+        public const int WPN8 = 8;
+        public const int WPN9 = 9;
+        public const int WPN10 = 10;
+        public const int WPN11 = 11;
+        public const int WPN12 = 12;
+        public const int WPN13 = 13;
+        public const int MAPEND = 1001;
+        public const double PERCENTHOTSPOT = 0.5;
+
+
     }
 }
