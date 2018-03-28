@@ -45,7 +45,7 @@ class Server
 
         pregame();
 
-        generateInitData();
+
 
         startGame();
     }
@@ -313,6 +313,8 @@ class Server
                 numClients++;
             }
         }
+
+        generateInitData();
 
         // Intialize and start transmit threads
         for (int i = 0; i < numClients; i++)
