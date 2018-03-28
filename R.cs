@@ -7,7 +7,7 @@ using System;
     {
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
-		public const ushort MAX_PLAYERS = 30;
+		public const ushort MAX_PLAYERS = 1;
 
         // Contains constants associated with the header type of the packet
         public static class Header
@@ -94,9 +94,9 @@ using System;
             public const int X_OFFSET = 5;
             public const int Z_OFFSET = 9;
             // Changed to a percentage - ALam
-            public const float DEFAULT_CACTUS_PERC = 0.9997f;
-            public const float DEFAULT_BUSH_PERC = 0.9995f;
-            public const float DEFAULT_BUILDING_PERC = 0.9999f;
+            public const float DEFAULT_BUSH_PERC = 0.9993f;
+            public const float DEFAULT_CACTUS_PERC = 0.9995f;
+            public const float DEFAULT_BUILDING_PERC = 0.9997f;
             // Terrain name
             public const string DEFAULT_NAME = "Terrain";
         }
@@ -136,7 +136,7 @@ using System;
         public const int WPN12 = 12;
         public const int WPN13 = 13;
         public const int MAPEND = 1001;
-        public const double PERCENTHOTSPOT = 0.5;
+        public const double PERCENTHOTSPOT = 0.75;
 
 
     }

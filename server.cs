@@ -45,15 +45,13 @@ class Server
 
         pregame();
 
-
-
         startGame();
     }
 
     public static void pregame()
     {
         players = new Dictionary<byte, connectionData>();
-
+        initTCPServer();
     }
 
     public static void startGame()

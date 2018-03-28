@@ -125,6 +125,8 @@ public class TerrainController
     -------------------------------------------------------------------------------------------------*/
     public bool GenerateEncoding()
     {
+        Random rand = new Random();
+        float randomValue;
         byte[,] map = new byte[this.Width, this.Length];
 
         for (long i = 0; i < this.Width; i++)
@@ -141,8 +143,7 @@ public class TerrainController
                     // Changed by Alam
 
                     // Changed back to just being 0.0 to 1.0
-                    Random rand = new Random();
-                    float randomValue = rand.Next(1, 101)/1f;
+                    randomValue = Convert.ToSingle(rand.NextDouble());
 
                     // Changed the comparison signs around
                     if (randomValue > R.Game.Terrain.DEFAULT_BUILDING_PERC)
