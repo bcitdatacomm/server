@@ -2,269 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using System.Net;
-using System.Net.Sockets;
-
-namespace DotNet
-{
-    /**
-     * This is a class that encapsulates a network endpoint.
-     */
-    class EndPoint
-    {
-        public IPEndPoint IPEndPoint { get; set; }
-
-        public EndPoint()
-        {
-            this.IPEndPoint = new IPEndPoint(IPAddress.Parse("0.0.0.0"), 42069);
-        }
-
-        /**
-         * Constructor.
-         * 
-         * string ip:   The ip in dotted decimal format
-         * ushort port: The port number.
-         */
-        public EndPoint(string ip, ushort port)
-        {
-            this.IPEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-        }
-    }
-
-    /**
-     * The server networking class. This class should be used when you are the 1 in 1..*.
-     */
-    class Server
-    {
-        public bool IsLAN { get; set; }
-        public string LastError { get; set; }
-
-        private Socket socket;
-
-        public Server()
-        {
-            this.IsLAN = false;
-        } 
-
-        ~Server()
-        {
-            if (this.socket != null)
-            {
-                this.socket.Shutdown(SocketShutdown.Both);
-                this.socket.Close();
-            }
-        }
-
-        /**
-         * Called when you want to connect to a port
-         * 
-         * ushort port: The port number.
-         * 
-         * Return:  True of the socket was initialized, false otherwise.
-         */
-        public bool Init(ushort port)
-        {
-            try
-            {
-                this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                this.socket.Bind(new IPEndPoint(IPAddress.Any, port));
-                return true;
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                this.socket = null;
-                return false;
-            }
-        }
-
-
-        /**
-         * Checks if the port has data to be read.
-         * 
-         * Return:  Will return false if there is no data to read, otherwise, returns true.
-         * If true is returned, a Recv() call needs to be made to get the data.
-         */
-        public bool Poll()
-        {
-            try
-            {
-                return this.socket.Poll(1, SelectMode.SelectRead);
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                return false;
-            }
-        }
-
-        /**
-         * Reads data from the socket.
-         * 
-         * EndPoint ep:     The endpoint to read from.
-         * byte[] buffer:   The buffer to fill with read bytes. 
-         * Int32 len:       The length of the buffer.
-         * 
-         * Return:  The number of bytes read.
-         */
-        public Int32 Recv(ref EndPoint ep, byte[] buffer, Int32 len)
-        {
-            try
-            {
-                System.Net.EndPoint tmp = (System.Net.EndPoint)ep.IPEndPoint;
-                int result = this.socket.ReceiveFrom(buffer, len, SocketFlags.None, ref tmp);
-                ep.IPEndPoint = (System.Net.IPEndPoint)tmp;
-                return result;
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                return 0;
-            }
-            
-        }
-
-        /**
-         * Writes data to the socket.
-         * 
-         * EndPoint ep:     The endpoint to write to.
-         * byte[] buffer:   The buffer to write.
-         * Int32 len:       The length of the buffer.
-         * 
-         * Return:  The number of bytes sent.
-         */
-        public Int32 Send(EndPoint ep, byte[] buffer, Int32 len)
-        {
-            try
-            {
-                if (this.IsLAN)
-                {
-                    return this.socket.SendTo(buffer, len, SocketFlags.Broadcast, ep.IPEndPoint);
-                }
-                else
-                {
-                    return this.socket.SendTo(buffer, len, SocketFlags.None, ep.IPEndPoint);
-                }
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                return 0;
-            }
-        }
-
-    }
-
-
-    /**
-     * The server networking class. This class should be used when you are the many in 1..*.
-     */
-    class Client
-    {
-        public string LastError { get; set; }
-
-        private Socket socket;
-        private EndPoint remoteEndPoint;
-
-        public Client() { }
-
-        ~Client()
-        {
-            if (this.socket != null)
-            {
-                this.socket.Shutdown(SocketShutdown.Both);
-                this.socket.Close();
-            }
-        }
-
-        /**
-         * Called when you want to connect to a port
-         * 
-         * string ip: The ip of the server in dotted decimal form.
-         * ushort port: The port number of the server.
-         * 
-         * Return:  True of the socket was initialized, false otherwise.
-         */
-        public bool Init(string ip, ushort port)
-        {
-            try
-            {
-                this.remoteEndPoint = new EndPoint(ip, port);
-                this.socket = new Socket(this.remoteEndPoint.IPEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                this.socket.Connect(this.remoteEndPoint.IPEndPoint);
-                return true;
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                this.socket = null;
-                return false;
-            }
-        }
-
-        /**
-         * Checks if the port has data to be read.
-         * 
-         * Return:  Will return false if there is no data to read, otherwise, returns true.
-         * If true is returned, a Recv() call needs to be made to get the data.
-         */
-        public bool Poll()
-        {
-            try
-            {
-                return this.socket.Poll(1, SelectMode.SelectRead);
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                return false;
-            }
-        }
-
-        /**
-         * Reads data from the socket.
-         * 
-         * byte[] buffer:   The buffer to fill with read bytes. 
-         * Int32 len:       The length of the buffer.
-         * 
-         * Return:  The number of bytes read.
-         */
-        public Int32 Recv(byte[] buffer, Int32 len)
-        {
-            try
-            {
-                return this.socket.Receive(buffer, len, SocketFlags.None);
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                return 0;
-            }
-        }
-
-        /**
-         * Writes data to the socket.
-         * 
-         * byte[] buffer:   The buffer to write.
-         * Int32 len:       The length of the buffer.
-         * 
-         * Return:  The number of bytes sent.
-         */
-        public Int32 Send(Byte[] buffer, Int32 len)
-        {
-            try
-            {
-                return this.socket.Send(buffer, len, SocketFlags.None);
-            }
-            catch (Exception e)
-            {
-                this.LastError = e.Message;
-                return 0;
-            }
-        }
-    }
-}
-
+// using System.Net;
+// using System.Net.Sockets;
+using Networking;
+using InitGuns;
 
 class Server
 {
@@ -275,8 +16,7 @@ class Server
     private static bool running;
     private static Mutex mutex;
 
-
-    private static DotNet.Server server;
+    private static Networking.Server server;
 
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
 
@@ -286,25 +26,36 @@ class Server
     static float spawnPoint = 1.0f;
 
 
+    // Game geneartion variables
+    private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
+    private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
+    private static Thread listenThread;
+    private static byte[] itemData  = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static byte[] mapData   = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static Int32 numClients = 0;
+    private static bool accepting = false;
+    private static TCPServer tcpServer;
+
     public static void Main()
     {
         Console.WriteLine("Starting server");
-
-        players = new Dictionary<byte, connectionData>();
-        
-        initNetworking();
-        startThreads();
-    }
-
-    public static void initNetworking()
-    {
-        server = new DotNet.Server();
-        server.Init(R.Net.PORT);
-    }
-
-    public static void startThreads()
-    {
         mutex = new Mutex();
+
+        pregame();
+
+        startGame();
+    }
+
+    public static void pregame()
+    {
+        players = new Dictionary<byte, connectionData>();
+        initTCPServer();
+    }
+
+    public static void startGame()
+    {
+        server = new Networking.Server();
+        server.Init(R.Net.PORT);
 
         sendThread = new Thread(sendThreadFunction);
         recvThread = new Thread(recvThreadFunction);
@@ -338,8 +89,10 @@ class Server
             {
                 buildSendPacket();
 
+                byte[] snapshot = new byte[sendBuffer.Length];
+                Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
+
                 mutex.WaitOne();
-                byte[] snapshot = sendBuffer;
                 foreach (KeyValuePair<byte, connectionData> pair in players)
                 {
                     server.Send(pair.Value.ep, snapshot, snapshot.Length);
@@ -351,24 +104,49 @@ class Server
         return;
     }
 
+    private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
+    {
+        byte tmp = 0;
+
+        if (hasPlayer)
+        {
+            tmp += 128;
+        }
+
+        if (hasBullet)
+        {
+            tmp += 64;
+        }
+
+        if (hasWeapon)
+        {
+            tmp += 32;
+        }
+
+        tmp += Convert.ToByte(players);
+
+        return tmp;
+    }
+
     private static void buildSendPacket()
     {
         mutex.WaitOne();
+        int offset = R.Net.Offset.PLAYERS;
+
+        sendBuffer[0] = generateTickPacketHeader(true, false, false, players.Count);
+
         foreach (KeyValuePair<byte, connectionData> pair in players)
         {
             byte id = pair.Key;
             connectionData player = pair.Value;
 
-            int offset = R.Net.Offset.PLAYERS;
-            // Find the existing player in the array
-            while (sendBuffer[offset] != id)
-            {
-                offset += R.Net.Size.PLAYER_DATA;
-            }
+            sendBuffer[offset] = id;
+            Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
+            Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
+            Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
+            // Weapon here
 
-            Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset, 4);
-            Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 4, 4);
-            Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 8, 4);
+            offset += 14;
         }
         mutex.ReleaseMutex();
     }
@@ -391,7 +169,7 @@ class Server
                     }
 
                     // Prepare to receive
-                    DotNet.EndPoint ep = new DotNet.EndPoint();
+                    EndPoint ep = new EndPoint();
                     byte[] recvBuffer = new byte[R.Net.Size.CLIENT_TICK];
 
                     // Receive
@@ -413,12 +191,13 @@ class Server
         return;
     }
 
-    private static void handleBuffer(byte[] inBuffer, DotNet.EndPoint ep)
+    private static void handleBuffer(byte[] inBuffer, EndPoint ep)
     {
         switch (inBuffer[0])
         {
-            case R.Net.Header.NEW_CLIENT:
-                addNewPlayer(ref inBuffer, ep);
+            case R.Net.Header.ACK:
+                LogError("ACK from " + ep.ToString());
+                addNewPlayer(ep);
                 break;
 
             case R.Net.Header.TICK:
@@ -431,27 +210,6 @@ class Server
         }
     }
 
-    private static void addNewPlayer(ref byte[] inBuffer, DotNet.EndPoint ep)
-    {
-        connectionData newPlayer = new connectionData();
-        newPlayer.id = nextPlayerId;
-        nextPlayerId++;
-
-        newPlayer.x = spawnPoint * 5;
-        newPlayer.z = spawnPoint * 5;
-        newPlayer.r = 0;
-        newPlayer.h = 100;
-        newPlayer.ep = ep;
-
-        spawnPoint++;
-
-        mutex.WaitOne();
-        players[newPlayer.id] = newPlayer;
-        mutex.ReleaseMutex();
-
-        sendInitPacket(newPlayer.id, newPlayer.x, newPlayer.z);
-    }
-
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
@@ -459,63 +217,106 @@ class Server
         float z = BitConverter.ToSingle(inBuffer, R.Net.Offset.Z);
         float r = BitConverter.ToSingle(inBuffer, R.Net.Offset.R);
 
-        int offset = R.Net.Offset.PLAYERS;
-        // Find the existing player in the array
-        while (sendBuffer[offset] != id)
-        {
-            offset += R.Net.Size.PLAYER_DATA;
-        }
-
         mutex.WaitOne();
         players[id].x = x;
         players[id].z = z;
         players[id].r = r;
-        Array.Copy(inBuffer, R.Net.Offset.X, sendBuffer, offset, 4);
-        Array.Copy(inBuffer, R.Net.Offset.Z, sendBuffer, offset + 4, 4);
-        Array.Copy(inBuffer, R.Net.Offset.R, sendBuffer, offset + 8, 4);
         mutex.ReleaseMutex();
     }
 
-    private static void sendInitPacket(byte id, float x, float z)
+    private static void addNewPlayer(EndPoint ep)
+    {
+        mutex.WaitOne();
+        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint * 5, spawnPoint * 5);
+        spawnPoint++;
+        nextPlayerId++;
+        players[newPlayer.id] = newPlayer;
+        mutex.ReleaseMutex();
+
+        sendInitPacket(newPlayer);
+    }
+
+    private static void sendInitPacket(connectionData newPlayer)
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
 
-        // Creates the player init packet
-        server.Send(ep, newPlayer, R.Net.Size.SERVER_TICK);
-
         buffer[0] = R.Net.Header.INIT_PLAYER;
-        buffer[1] = id;
+        buffer[1] = newPlayer.id;
         int offset = 2;
 
         // sets the coordinates for the new player
-        Array.Copy(BitConverter.GetBytes(x), 0, buffer, offset, 4);
-        Array.Copy(BitConverter.GetBytes(z), 0, buffer, offset + 4, 4);
+        Array.Copy(BitConverter.GetBytes(newPlayer.x), 0, buffer, offset, 4);
+        Array.Copy(BitConverter.GetBytes(newPlayer.z), 0, buffer, offset + 4, 4);
 
-        mutex.WaitOne();
-        DotNet.EndPoint ep = players[id].ep;
-        mutex.ReleaseMutex();
+        server.Send(newPlayer.ep, buffer, buffer.Length);
+    }
 
-        server.Send(ep, buffer, buffer.Length);
+    private static void initTCPServer()
+    {
+        tcpServer = new TCPServer();
+        tcpServer.Init(R.Net.PORT);
+        listenThread = new Thread(listenThreadFunc);
+        listenThread.Start();
+        listenThread.Join();
+    }
 
-        mutex.WaitOne();
+    private static void generateInitData()
+    {
+        InitRandomGuns getItems = new InitRandomGuns(R.Net.MAX_PLAYERS);
+        itemData = getItems.compressedpcktarray;
 
-        // Find the offset to add the player to sendBuffer
-        offset = R.Net.Offset.PLAYERS;
-        while (sendBuffer[offset] != 0)
+        TerrainController tc = new TerrainController();
+        while (!tc.GenerateEncoding());
+        int terrainDataLength = tc.CompressedData.Length;
+        Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
+    }
+
+    private static void listenThreadFunc()
+    {
+        Int32 clientsockfd;
+        accepting = true;
+        //Int32 result;
+		Networking.EndPoint ep = new Networking.EndPoint ();
+
+        while (accepting && numClients < R.Net.MAX_PLAYERS)
         {
-            offset += R.Net.Size.PLAYER_DATA;
+			clientsockfd = tcpServer.AcceptConnection(ref ep);
+            if (clientsockfd <= 0)
+            {
+                LogError("Accept error: " + clientsockfd);
+            }
+            else
+            {
+                clientSockFdArr[numClients] = clientsockfd;
+                LogError("Connected client: " + ep.ToString()); //Add toString() for EndPoint
+                numClients++;
+            }
         }
 
-        // Sets the player ID
-        sendBuffer[offset] = id;
-        offset++;
+        generateInitData();
 
-        // sets the coordinates for each player connected
-        Array.Copy(BitConverter.GetBytes(x), 0, sendBuffer, offset, 4);
-        Array.Copy(BitConverter.GetBytes(z), 0, sendBuffer, offset + 4, 4);
-
-        mutex.ReleaseMutex();
+        // Intialize and start transmit threads
+        for (int i = 0; i < numClients; i++)
+        {
+            transmitThreadArr[i] = new Thread(transmitThreadFunc);
+            transmitThreadArr[i].Start(clientSockFdArr[i]);
+        }
     }
+
+    private static void transmitThreadFunc(object clientsockfd)
+    {
+        Int32 numSentMap;
+        Int32 numSentItem;
+        Int32 sockfd = (Int32)clientsockfd;
+
+		numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
+        LogError("Num Item Bytes Sent: " + numSentItem);
+		numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
+        LogError("Num Map Bytes Sent: " + numSentMap);
+
+        tcpServer.CloseClientSocket(sockfd);
+    }
+
 
     private static void LogError(string s)
     {
