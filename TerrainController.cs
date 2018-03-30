@@ -133,8 +133,13 @@ public class TerrainController
         {
             for (long j = 0; j < this.Length; j++)
             {
+                // Check if the coordinate is in the player spawn band
+                if ((i >= 380 && i <= 620) && (j >= 380 && j <= 620))
+                {
+                    map[i, j] = (byte)TileTypes.GROUND;
+                }
                 // Check for border
-                if (i == 0 || i == this.Width || j == 0 || j == this.Length)
+                else if (i == 0 || i == this.Width || j == 0 || j == this.Length)
                 {
                     map[i, j] = (byte)TileTypes.GROUND;
                 }
