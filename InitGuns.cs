@@ -341,14 +341,8 @@ namespace InitGuns
             WeaponSpell Weapon = new WeaponSpell();
 
             Weapon.Type = weaponinbytes[0];
-
-            byte[] ID = new byte[R.Init.IDBYTES];
             Weapon.ID = BitConverter.ToInt32(weaponinbytes, R.Init.WEAPONOFFSETID);
-
-            byte[] X = new byte[R.Init.COORDBYTES];
             Weapon.X = BitConverter.ToInt32(weaponinbytes, R.Init.WEAPONOFFSETX);
-
-            byte[] Z = new byte[R.Init.COORDBYTES];
             Weapon.Z = BitConverter.ToInt32(weaponinbytes, R.Init.WEAPONOFFSETZ);
 
             return Weapon;

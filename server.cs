@@ -16,7 +16,6 @@ class Server
     private static bool running;
     private static Mutex mutex;
 
-
     private static Networking.Server server;
 
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
@@ -34,7 +33,6 @@ class Server
     private static byte[] itemData  = new byte[R.Net.TCP_BUFFER_SIZE];
     private static byte[] mapData   = new byte[R.Net.TCP_BUFFER_SIZE];
     private static Int32 numClients = 0;
-    private static EndPoint connectionEp;
     private static bool accepting = false;
     private static TCPServer tcpServer;
 
@@ -197,6 +195,11 @@ class Server
     {
         switch (inBuffer[0])
         {
+            case R.Net.Header.ACK:
+                LogError("ACK from " + ep.ToString());
+                addNewPlayer(ep);
+                break;
+
             case R.Net.Header.TICK:
                 updateExistingPlayer(ref inBuffer);
                 break;
@@ -205,15 +208,6 @@ class Server
                 LogError("Server received a valid amount of data but the header is incorrect.");
                 break;
         }
-    }
-
-    private static void addNewPlayer(EndPoint ep)
-    {
-        mutex.WaitOne();
-        players[nextPlayerId] = new connectionData(ep, nextPlayerId, spawnPoint * 5, spawnPoint * 5);
-        spawnPoint++;
-        nextPlayerId++;
-        mutex.ReleaseMutex();
     }
 
     private static void updateExistingPlayer(ref byte[] inBuffer)
@@ -230,42 +224,31 @@ class Server
         mutex.ReleaseMutex();
     }
 
-    private static void sendInitPacket(byte id, float x, float z)
+    private static void addNewPlayer(EndPoint ep)
+    {
+        mutex.WaitOne();
+        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint * 5, spawnPoint * 5);
+        spawnPoint++;
+        nextPlayerId++;
+        players[newPlayer.id] = newPlayer;
+        mutex.ReleaseMutex();
+
+        sendInitPacket(newPlayer);
+    }
+
+    private static void sendInitPacket(connectionData newPlayer)
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
 
         buffer[0] = R.Net.Header.INIT_PLAYER;
-        buffer[1] = id;
+        buffer[1] = newPlayer.id;
         int offset = 2;
 
         // sets the coordinates for the new player
-        Array.Copy(BitConverter.GetBytes(x), 0, buffer, offset, 4);
-        Array.Copy(BitConverter.GetBytes(z), 0, buffer, offset + 4, 4);
+        Array.Copy(BitConverter.GetBytes(newPlayer.x), 0, buffer, offset, 4);
+        Array.Copy(BitConverter.GetBytes(newPlayer.z), 0, buffer, offset + 4, 4);
 
-        mutex.WaitOne();
-        EndPoint ep = players[id].ep;
-        mutex.ReleaseMutex();
-
-        server.Send(ep, buffer, buffer.Length);
-
-        mutex.WaitOne();
-
-        // Find the offset to add the player to sendBuffer
-        offset = R.Net.Offset.PLAYERS;
-        while (sendBuffer[offset] != 0)
-        {
-            offset += R.Net.Size.PLAYER_DATA;
-        }
-
-        // Sets the player ID
-        sendBuffer[offset] = id;
-        offset++;
-
-        // sets the coordinates for each player connected
-        Array.Copy(BitConverter.GetBytes(x), 0, sendBuffer, offset, 4);
-        Array.Copy(BitConverter.GetBytes(z), 0, sendBuffer, offset + 4, 4);
-
-        mutex.ReleaseMutex();
+        server.Send(newPlayer.ep, buffer, buffer.Length);
     }
 
     private static void initTCPServer()
@@ -276,7 +259,6 @@ class Server
         listenThread.Start();
         listenThread.Join();
     }
-
 
     private static void generateInitData()
     {
@@ -306,7 +288,6 @@ class Server
             else
             {
                 clientSockFdArr[numClients] = clientsockfd;
-                addNewPlayer(ep);
                 LogError("Connected client: " + ep.ToString()); //Add toString() for EndPoint
                 numClients++;
             }
