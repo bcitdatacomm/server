@@ -23,9 +23,6 @@ class Server
     static byte nextPlayerId = 1;
     static Dictionary<byte, connectionData> players;
 
-    static float spawnPoint = 1.0f;
-
-
     // Game geneartion variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
@@ -226,9 +223,22 @@ class Server
 
     private static void addNewPlayer(EndPoint ep)
     {
+        Random rng = new Random();
+        float xSpawn = Convert.ToSingle(rng.Next(80, 100));
+        float ySpawn = Convert.ToSingle(rng.Next(80, 100));
+
+        if (rng.NextDouble() > 0.5)
+        {
+            xSpawn *= -1;
+        }
+
+        if (rng.NextDouble() > 0.5)
+        {
+            ySpawn *= -1;
+        }
+
         mutex.WaitOne();
-        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint * 5, spawnPoint * 5);
-        spawnPoint++;
+        connectionData newPlayer = new connectionData(ep, nextPlayerId, xSpawn, ySpawn);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
         mutex.ReleaseMutex();
