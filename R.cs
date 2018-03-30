@@ -7,7 +7,7 @@ using System;
     {
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
-		public const ushort MAX_PLAYERS = 1;
+		public const ushort MAX_PLAYERS = 5;
 
         // Contains constants associated with the header type of the packet
         public static class Header
@@ -137,7 +137,5 @@ using System;
         public const int WPN13 = 13;
         public const int MAPEND = 1001;
         public const double PERCENTHOTSPOT = 0.75;
-
-
     }
 }

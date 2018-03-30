@@ -33,6 +33,8 @@ class Server
     private static bool accepting = false;
     private static TCPServer tcpServer;
 
+    private static SpawnPointGenerator spawnPointGenerator = new SpawnPointGenerator();
+
     public static void Main()
     {
         Console.WriteLine("Starting server");
@@ -143,7 +145,7 @@ class Server
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
             // Weapon here
 
-            offset += 14;
+            offset += R.Net.Size.PLAYER_DATA;
         }
         mutex.ReleaseMutex();
     }
@@ -223,22 +225,10 @@ class Server
 
     private static void addNewPlayer(EndPoint ep)
     {
-        Random rng = new Random();
-        float xSpawn = Convert.ToSingle(rng.Next(80, 100));
-        float ySpawn = Convert.ToSingle(rng.Next(80, 100));
-
-        if (rng.NextDouble() > 0.5)
-        {
-            xSpawn *= -1;
-        }
-
-        if (rng.NextDouble() > 0.5)
-        {
-            ySpawn *= -1;
-        }
+        List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
 
         mutex.WaitOne();
-        connectionData newPlayer = new connectionData(ep, nextPlayerId, xSpawn, ySpawn);
+        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
         mutex.ReleaseMutex();
