@@ -29,8 +29,10 @@ using System;
             public const int X = PID + 1;
             public const int Z = X + 4;
             public const int R = Z + 4;
-            public const int INV = R + 4;
-            public const int BULLET = INV + 5;
+            public const int WEAPON_ID = R + 4;
+            public const int WEAPON_TYPE = WEAPON_ID + 4;
+            public const int BULLET_ID = WEAPON_TYPE + 1;
+            public const int BULLET_TYPE = BULLET_ID + 4;
 
             // Offsets for server to client packet
             public const int DANGER_ZONE = 1;
@@ -39,6 +41,8 @@ using System;
             public const int INVENTORY = 18;
             public const int PLAYERS = 23;
             public const int BULLETS = 443;
+            public const int WEAPONS = 653;
+
             public static class Player
             {
                 public const int ID = 0;
