@@ -41,6 +41,8 @@ using System;
             public const int INVENTORY = 18;
             public const int PLAYERS = 23;
             public const int BULLETS = 443;
+            public const int WEAPONS = 653;
+
             public static class Player
             {
                 public const int ID = 0;
