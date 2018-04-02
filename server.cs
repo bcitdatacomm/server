@@ -143,9 +143,6 @@ class Server
             Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
 
-            // The server no long keeps track of the player's inventory
-            // sendBuffer[offset + 10] = player.inventory[4];
-
             offset += R.Net.Size.PLAYER_DATA;
         }
 
@@ -262,7 +259,7 @@ class Server
         if (weaponId != 0)
         {
             mutex.WaitOne();
-            if (players[playerId].currentWeaponId ==  weaponId)
+            if (players[playerId].currentWeaponId == weaponId)
             {
                 mutex.ReleaseMutex();
                 return;
@@ -271,6 +268,7 @@ class Server
             players[playerId].currentWeaponId = weaponId;
             players[playerId].currentWeaponType = weaponType;
             mutex.ReleaseMutex();
+         
             Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
         }
     }
