@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-// using System.Net;
-// using System.Net.Sockets;
 using Networking;
 using InitGuns;
 
@@ -144,7 +142,9 @@ class Server
             Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
             Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
-            sendBuffer[offset + 10] = player.inventory[4];
+
+            // The server no long keeps track of the player's inventory
+            // sendBuffer[offset + 10] = player.inventory[4];
 
             offset += R.Net.Size.PLAYER_DATA;
         }
@@ -222,8 +222,7 @@ class Server
                 break;
         }
     }
-
-    //setting data for client
+//setting data for client
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
@@ -231,27 +230,49 @@ class Server
         float z = BitConverter.ToSingle(inBuffer, R.Net.Offset.Z);
         float r = BitConverter.ToSingle(inBuffer, R.Net.Offset.R);
 
-        byte[] inv = new byte[5];
+        int weaponId = BitConverter.ToInt32(inBuffer, R.Net.Offset.WEAPON_ID);
+        byte weaponType = inBuffer[R.Net.Offset.WEAPON_TYPE];
+        handleIncomingWeapon(id, weaponId, weaponType);
 
-        Array.Copy(inBuffer, R.Net.Offset.INV, inv, 0, 5);
-        int bulletId = BitConverter.ToInt32(inBuffer, R.Net.Offset.BULLET);
-        byte bulletType = inBuffer[R.Net.Offset.BULLET + 4];
-
-        if (bulletType != 0)
-        {
-            BulletInfo bulletInfo = new BulletInfo(bulletId, bulletType, id);
-            mutex.WaitOne();
-            newBullets.Push(bulletInfo);
-            bullets[bulletId] = bulletInfo;
-            mutex.ReleaseMutex();
-        }
+        int bulletId = BitConverter.ToInt32(inBuffer, R.Net.Offset.BULLET_ID);
+        byte bulletType = inBuffer[R.Net.Offset.BULLET_TYPE];
+        handleIncomingBullet(id, bulletId, bulletType);
 
         mutex.WaitOne();
         players[id].x = x;
         players[id].z = z;
         players[id].r = r;
-        players[id].inventory = inv;
         mutex.ReleaseMutex();
+    }
+
+    private static void handleIncomingBullet(byte playerId, int bulletId, byte bulletType)
+    {
+        if (bulletType != 0)
+        {
+            BulletInfo bulletInfo = new BulletInfo(bulletId, bulletType, playerId);
+            mutex.WaitOne();
+            newBullets.Push(bulletInfo);
+            bullets[bulletId] = bulletInfo;
+            mutex.ReleaseMutex();
+        }
+    }
+
+    private static void handleIncomingWeapon(byte playerId, int weaponId, byte weaponType)
+    {
+        if (weaponId != 0)
+        {
+            mutex.WaitOne();
+            if (players[playerId].currentWeaponId ==  weaponId)
+            {
+                mutex.ReleaseMutex();
+                return;
+            }
+
+            players[playerId].currentWeaponId = weaponId;
+            players[playerId].currentWeaponType = weaponType;
+            mutex.ReleaseMutex();
+            Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
+        }
     }
 
     private static void addNewPlayer(EndPoint ep)
