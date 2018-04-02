@@ -9,7 +9,7 @@ class connectionData
 	public float x { get; set; }
 	public float z { get; set; }
 	public float r { get; set; }
-
+	public byte[] inventory { get; set; }
 	public int h { get; set; }
 
 	public connectionData(EndPoint ep, byte id, float x, float z)
@@ -20,5 +20,6 @@ class connectionData
 		this.z = z;
 		this.r = 0;
 		this.h = 100;
+		this.inventory = new byte[5];
 	}
 }

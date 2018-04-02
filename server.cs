@@ -22,7 +22,8 @@ class Server
 
     static byte nextPlayerId = 1;
     static Dictionary<byte, connectionData> players;
-
+    static Stack<BulletInfo> newBullets = new Stack<BulletInfo>();
+    static Dictionary<int, BulletInfo> bullets = new Dictionary<int, BulletInfo>();
     // Game geneartion variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
@@ -131,8 +132,8 @@ class Server
     {
         mutex.WaitOne();
         int offset = R.Net.Offset.PLAYERS;
-
-        sendBuffer[0] = generateTickPacketHeader(true, false, false, players.Count);
+        int bulletOffset = R.Net.Offset.BULLETS;
+        sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, false, players.Count);
 
         foreach (KeyValuePair<byte, connectionData> pair in players)
         {
@@ -143,9 +144,22 @@ class Server
             Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
             Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
-            // Weapon here
+            sendBuffer[offset + 10] = player.inventory[4];
 
             offset += R.Net.Size.PLAYER_DATA;
+        }
+
+        sendBuffer[bulletOffset] = Convert.ToByte(newBullets.Count);
+        bulletOffset++;
+
+        while (newBullets.Count > 0)
+        {
+            BulletInfo bullet = newBullets.Pop();
+            sendBuffer[bulletOffset] = bullet.playerId;
+            Array.Copy(BitConverter.GetBytes(bullet.bulletId), 0, sendBuffer, bulletOffset + 1, 4);
+            sendBuffer[bulletOffset + 5] = bullet.type;
+            sendBuffer[bulletOffset + 6] = 1;
+            bulletOffset += 7;
         }
         mutex.ReleaseMutex();
     }
@@ -209,6 +223,7 @@ class Server
         }
     }
 
+    //setting data for client
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
@@ -216,10 +231,26 @@ class Server
         float z = BitConverter.ToSingle(inBuffer, R.Net.Offset.Z);
         float r = BitConverter.ToSingle(inBuffer, R.Net.Offset.R);
 
+        byte[] inv = new byte[5];
+
+        Array.Copy(inBuffer, R.Net.Offset.INV, inv, 0, 5);
+        int bulletId = BitConverter.ToInt32(inBuffer, R.Net.Offset.BULLET);
+        byte bulletType = inBuffer[R.Net.Offset.BULLET + 4];
+
+        if (bulletType != 0)
+        {
+            BulletInfo bulletInfo = new BulletInfo(bulletId, bulletType, id);
+            mutex.WaitOne();
+            newBullets.Push(bulletInfo);
+            bullets[bulletId] = bulletInfo;
+            mutex.ReleaseMutex();
+        }
+
         mutex.WaitOne();
         players[id].x = x;
         players[id].z = z;
         players[id].r = r;
+        players[id].inventory = inv;
         mutex.ReleaseMutex();
     }
 

@@ -7,7 +7,7 @@ using System;
     {
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
-		public const ushort MAX_PLAYERS = 5;
+		public const ushort MAX_PLAYERS = 10;
 
         // Contains constants associated with the header type of the packet
         public static class Header
@@ -38,7 +38,7 @@ using System;
             public const int HEALTH = 17;
             public const int INVENTORY = 18;
             public const int PLAYERS = 23;
-
+            public const int BULLETS = 443;
             public static class Player
             {
                 public const int ID = 0;
@@ -90,9 +90,13 @@ using System;
             public const int ID_BYTE_SIZE = 4;
             public const int X_BYTE_SIZE = 4;
             public const int Z_BYTE_SIZE = 4;
+            public const int INV_BYTE_SIZE = 5;
+            public const int BUL_BYTE_SIZE = 5;
             public const int ID_OFFSET = 1;
             public const int X_OFFSET = 5;
             public const int Z_OFFSET = 9;
+            public const int INV_OFFSET = 14;
+            public const int BUL_OFFSET = 19;
             // Changed to a percentage - ALam
             public const float DEFAULT_BUSH_PERC = 0.9993f;
             public const float DEFAULT_CACTUS_PERC = 0.9995f;
@@ -104,10 +108,19 @@ using System;
         // Player Constants
         public static class Players
         {
-                   
+
         }
 
     }
+
+    public static class Type
+    {
+        public const byte KNIFE = 1;
+        public const byte PISTOL = 2;
+        public const byte SHOTGUN = 3;
+        public const byte RIFLE = 4;
+    }
+
     public static class Init
     {
         public const int PLAYERMULT = 2;
