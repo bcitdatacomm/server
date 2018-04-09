@@ -13,6 +13,13 @@ class Server
     private static Thread recvThread;
     private static bool running;
     private static Mutex mutex;
+    
+    private static float gameTimer;
+    private static float dangerZoneX;
+    private static float dangerZoneZ;
+    private static float dangerZoneRadius;
+    private static bool overtime = false;
+    private static Random random = new Random();
 
     private static Networking.Server server;
 
@@ -63,7 +70,10 @@ class Server
         mutex.WaitOne();
         running = true;
         mutex.ReleaseMutex();
-
+        
+        // 15 minutes in milliseconds
+        gameTimer = 900000;
+        
         sendThread.Start();
         recvThread.Start();
     }
@@ -87,6 +97,7 @@ class Server
         {
             if (isTick())
             {
+                updateTimer();
                 buildSendPacket();
 
                 byte[] snapshot = new byte[sendBuffer.Length];
@@ -126,6 +137,35 @@ class Server
         tmp += Convert.ToByte(players);
 
         return tmp;
+    }
+    
+    private static void updateTimer()
+    {
+        gameTimer = gameTimer - tickInterval;
+        
+        // 5 minutes have passed, start shrinking danger zone
+        if (gameTimer < 600000 && > 300000)
+        {
+            dangerZoneRadius = dangerZoneRadius - ((100 / 300000) / 128)
+        }
+        
+        // 10 minutes have passed, shrinking speeds up
+        if (gameTimer < 300000)
+        {
+            if (overtime == false)
+            {
+                dangerZoneRadius = dangerZoneRadius - 100;
+                overtime = true;
+            }
+            dangerZoneRadius = dangerZoneRadius - ((300 / 300000) / 128)
+        }
+        
+        mutex.WaitOne();
+            Array.Copy(BitConverter.GetBytes(gameTimer), 0, sendBuffer, R.Net.Offset.TIME, 4);
+            Array.Copy(BitConverter.GetBytes(dangerZoneX), 0, sendBuffer, R.Net.Offset.DANGER_ZONE, 4);
+            Array.Copy(BitConverter.GetBytes(dangerZoneZ), 0, sendBuffer, R.Net.Offset.DANGER_ZONE + 4, 4);
+            Array.Copy(BitConverter.GetBytes(dangerZoneRadius), 0, sendBuffer, R.Net.Offset.DANGER_ZONE + 8, 4);
+        mutex.ReleaseMutex();        
     }
 
     private static void buildSendPacket()
@@ -348,6 +388,10 @@ class Server
         while (!tc.GenerateEncoding());
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
+        
+        dangerZoneX = (float)((random.NextDouble() * R.Game.Terrain.DEFAULT_WIDTH) - (R.Game.Terrain.DEFAULT_WIDTH / 2));
+        dangerZoneZ = (float)((random.NextDouble() * R.Game.Terrain.DEFAULT_LENGTH) - (R.Game.Terrain.DEFAULT_LENGTH / 2));
+        dangerZoneRadius = 500;
     }
 
     private static void listenThreadFunc()
