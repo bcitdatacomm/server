@@ -61,8 +61,8 @@ class Bullet
                 break;
         }
 
-        this.deltaX = (float)(this.speed * Math.Cos(player.r));
-        this.deltaZ = (float)(this.speed * Math.Sin(player.r));
+        this.deltaX = (float)(this.speed * Math.Cos(player.r * (Math.PI / 180)));
+        this.deltaZ = (float)(this.speed * Math.Sin(player.r * (Math.PI / 180)));
 	}
 
     public bool Update()
