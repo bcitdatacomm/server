@@ -297,7 +297,7 @@ class Server
 
             weaponSwapEvents.Push(Tuple.Create(playerId, weaponId));
             mutex.ReleaseMutex();
-         
+
             Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
         }
     }
@@ -360,6 +360,12 @@ class Server
         while (accepting && numClients < R.Net.MAX_PLAYERS)
         {
 			clientsockfd = tcpServer.AcceptConnection(ref ep);
+
+            if (clientsockfd == -11)
+            {
+                LogError("Accept timeout: Breaking out of listen loop");
+                accepting = false;
+            }
             if (clientsockfd <= 0)
             {
                 LogError("Accept error: " + clientsockfd);
