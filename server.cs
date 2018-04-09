@@ -95,6 +95,11 @@ class Server
                 mutex.WaitOne();
                 foreach (KeyValuePair<byte, connectionData> pair in players)
                 {
+                    foreach(KeyValuePair<int, BulletInfo> bullet in bullets)
+                    {
+                        Console.WriteLine(bullet.Value);
+                    }
+                    snapshot[R.Net.Offset.HEALTH] = (byte) (pair.Value.h--);
                     server.Send(pair.Value.ep, snapshot, snapshot.Length);
                 }
                 mutex.ReleaseMutex();
@@ -128,6 +133,12 @@ class Server
         return tmp;
     }
 
+    private static bool CircleCollided(float x1, float y1, float r1, float x2, float y2, float r2)
+    {
+               double distance = Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+               return (distance < (r1 + r2));
+    }
+
     private static void buildSendPacket()
     {
         mutex.WaitOne();
@@ -148,7 +159,6 @@ class Server
             Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
             Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
-
             offset += R.Net.Size.PLAYER_DATA;
         }
 
@@ -297,7 +307,7 @@ class Server
 
             weaponSwapEvents.Push(Tuple.Create(playerId, weaponId));
             mutex.ReleaseMutex();
-         
+
             Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
         }
     }
