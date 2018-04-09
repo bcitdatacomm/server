@@ -20,8 +20,8 @@ class Server
 
     private static byte nextPlayerId = 1;
     private static Dictionary<byte, connectionData> players;
-    private static Stack<BulletInfo> newBullets = new Stack<BulletInfo>();
-    private static Dictionary<int, BulletInfo> bullets = new Dictionary<int, BulletInfo>();
+    private static Stack<Bullet> newBullets = new Stack<Bullet>();
+    private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
 
     // Game geneartion variables
@@ -160,10 +160,10 @@ class Server
 
             while (newBullets.Count > 0)
             {
-                BulletInfo bullet = newBullets.Pop();
-                sendBuffer[bulletOffset] = bullet.playerId;
-                Array.Copy(BitConverter.GetBytes(bullet.bulletId), 0, sendBuffer, bulletOffset + 1, 4);
-                sendBuffer[bulletOffset + 5] = bullet.type;
+                Bullet bullet = newBullets.Pop();
+                sendBuffer[bulletOffset] = bullet.PlayerId;
+                Array.Copy(BitConverter.GetBytes(bullet.BulletId), 0, sendBuffer, bulletOffset + 1, 4);
+                sendBuffer[bulletOffset + 5] = bullet.Type;
                 sendBuffer[bulletOffset + 6] = 1;
                 bulletOffset += 7;
             }
@@ -183,7 +183,6 @@ class Server
                 weaponOffset += 5;
             }
         }
-
 
         mutex.ReleaseMutex();
     }
@@ -246,7 +245,7 @@ class Server
                 break;
         }
     }
-//setting data for client
+
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
@@ -273,10 +272,11 @@ class Server
     {
         if (bulletType != 0)
         {
-            BulletInfo bulletInfo = new BulletInfo(bulletId, bulletType, playerId);
+            connectionData player = players[playerId];
+            Bullet bullet = new Bullet(bulletId, bulletType, player);
             mutex.WaitOne();
-            newBullets.Push(bulletInfo);
-            bullets[bulletId] = bulletInfo;
+            newBullets.Push(bullet);
+            bullets[bulletId] = bullet;
             mutex.ReleaseMutex();
         }
     }
@@ -354,8 +354,7 @@ class Server
     {
         Int32 clientsockfd;
         accepting = true;
-        //Int32 result;
-		Networking.EndPoint ep = new Networking.EndPoint ();
+		Networking.EndPoint ep = new Networking.EndPoint();
 
         while (accepting && numClients < R.Net.MAX_PLAYERS)
         {
