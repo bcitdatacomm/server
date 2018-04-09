@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-// using System.Net;
-// using System.Net.Sockets;
 using Networking;
 using InitGuns;
 
@@ -20,11 +18,11 @@ class Server
 
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
 
-    static byte nextPlayerId = 1;
-    static Dictionary<byte, connectionData> players;
-
-    static float spawnPoint = 1.0f;
-
+    private static byte nextPlayerId = 1;
+    private static Dictionary<byte, connectionData> players;
+    private static Stack<BulletInfo> newBullets = new Stack<BulletInfo>();
+    private static Dictionary<int, BulletInfo> bullets = new Dictionary<int, BulletInfo>();
+    private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
 
     // Game geneartion variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
@@ -35,6 +33,8 @@ class Server
     private static Int32 numClients = 0;
     private static bool accepting = false;
     private static TCPServer tcpServer;
+
+    private static SpawnPointGenerator spawnPointGenerator = new SpawnPointGenerator();
 
     public static void Main()
     {
@@ -132,9 +132,13 @@ class Server
     {
         mutex.WaitOne();
         int offset = R.Net.Offset.PLAYERS;
+        int bulletOffset = R.Net.Offset.BULLETS;
+        int weaponOffset = R.Net.Offset.WEAPONS;
 
-        sendBuffer[0] = generateTickPacketHeader(true, false, false, players.Count);
+        // Header
+        sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count);
 
+        // Player data
         foreach (KeyValuePair<byte, connectionData> pair in players)
         {
             byte id = pair.Key;
@@ -144,10 +148,43 @@ class Server
             Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
             Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
-            // Weapon here
 
-            offset += 14;
+            offset += R.Net.Size.PLAYER_DATA;
         }
+
+        if (newBullets.Count > 0)
+        {
+            // Bullet data
+            sendBuffer[bulletOffset] = Convert.ToByte(newBullets.Count);
+            bulletOffset++;
+
+            while (newBullets.Count > 0)
+            {
+                BulletInfo bullet = newBullets.Pop();
+                sendBuffer[bulletOffset] = bullet.playerId;
+                Array.Copy(BitConverter.GetBytes(bullet.bulletId), 0, sendBuffer, bulletOffset + 1, 4);
+                sendBuffer[bulletOffset + 5] = bullet.type;
+                sendBuffer[bulletOffset + 6] = 1;
+                bulletOffset += 7;
+            }
+        }
+
+        if (weaponSwapEvents.Count > 0)
+        {
+            // Weapon swap event
+            sendBuffer[weaponOffset] = Convert.ToByte(weaponSwapEvents.Count);
+            weaponOffset++;
+
+            while (weaponSwapEvents.Count > 0)
+            {
+                Tuple<byte, int> weaponSwap = weaponSwapEvents.Pop();
+                sendBuffer[weaponOffset] = weaponSwap.Item1;
+                Array.Copy(BitConverter.GetBytes(weaponSwap.Item2), 0, sendBuffer, weaponOffset + 1, 4);
+                weaponOffset += 5;
+            }
+        }
+
+
         mutex.ReleaseMutex();
     }
 
@@ -209,13 +246,21 @@ class Server
                 break;
         }
     }
-
+//setting data for client
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
         float x = BitConverter.ToSingle(inBuffer, R.Net.Offset.X);
         float z = BitConverter.ToSingle(inBuffer, R.Net.Offset.Z);
         float r = BitConverter.ToSingle(inBuffer, R.Net.Offset.R);
+
+        int weaponId = BitConverter.ToInt32(inBuffer, R.Net.Offset.WEAPON_ID);
+        byte weaponType = inBuffer[R.Net.Offset.WEAPON_TYPE];
+        handleIncomingWeapon(id, weaponId, weaponType);
+
+        int bulletId = BitConverter.ToInt32(inBuffer, R.Net.Offset.BULLET_ID);
+        byte bulletType = inBuffer[R.Net.Offset.BULLET_TYPE];
+        handleIncomingBullet(id, bulletId, bulletType);
 
         mutex.WaitOne();
         players[id].x = x;
@@ -224,11 +269,45 @@ class Server
         mutex.ReleaseMutex();
     }
 
+    private static void handleIncomingBullet(byte playerId, int bulletId, byte bulletType)
+    {
+        if (bulletType != 0)
+        {
+            BulletInfo bulletInfo = new BulletInfo(bulletId, bulletType, playerId);
+            mutex.WaitOne();
+            newBullets.Push(bulletInfo);
+            bullets[bulletId] = bulletInfo;
+            mutex.ReleaseMutex();
+        }
+    }
+
+    private static void handleIncomingWeapon(byte playerId, int weaponId, byte weaponType)
+    {
+        if (weaponId != 0)
+        {
+            mutex.WaitOne();
+            if (players[playerId].currentWeaponId == weaponId)
+            {
+                mutex.ReleaseMutex();
+                return;
+            }
+
+            players[playerId].currentWeaponId = weaponId;
+            players[playerId].currentWeaponType = weaponType;
+
+            weaponSwapEvents.Push(Tuple.Create(playerId, weaponId));
+            mutex.ReleaseMutex();
+         
+            Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
+        }
+    }
+
     private static void addNewPlayer(EndPoint ep)
     {
+        List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
+
         mutex.WaitOne();
-        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint * 5, spawnPoint * 5);
-        spawnPoint++;
+        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
         mutex.ReleaseMutex();

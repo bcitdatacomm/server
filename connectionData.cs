@@ -9,8 +9,10 @@ class connectionData
 	public float x { get; set; }
 	public float z { get; set; }
 	public float r { get; set; }
-
 	public int h { get; set; }
+
+	public int currentWeaponId { get; set; }
+	public byte currentWeaponType { get; set; }
 
 	public connectionData(EndPoint ep, byte id, float x, float z)
 	{
@@ -20,5 +22,7 @@ class connectionData
 		this.z = z;
 		this.r = 0;
 		this.h = 100;
+		this.currentWeaponId = 0;
+		this.currentWeaponType = 0;
 	}
 }

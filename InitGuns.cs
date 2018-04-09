@@ -184,7 +184,7 @@ namespace InitGuns
 
         public class WeaponSpell
         {
-            public static int inc = 0;
+            public static int inc = 1;
             public int X { get; set; }
             public int Z { get; set; }
             public int ID { get; set; }
