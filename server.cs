@@ -28,8 +28,11 @@ class Server
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
     private static Thread listenThread;
-    private static byte[] itemData  = new byte[R.Net.TCP_BUFFER_SIZE];
-    private static byte[] mapData   = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static byte[] itemData = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static byte[] mapData = new byte[R.Net.TCP_BUFFER_SIZE];
+    ///////////////////
+    private static byte[] obstacleData = new byte[R.Net.TCP_BUFFER_SIZE];
+    ///////////////////
     private static Int32 numClients = 0;
     private static bool accepting = false;
     private static TCPServer tcpServer;
@@ -246,7 +249,7 @@ class Server
                 break;
         }
     }
-//setting data for client
+    //setting data for client
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
@@ -297,7 +300,7 @@ class Server
 
             weaponSwapEvents.Push(Tuple.Create(playerId, weaponId));
             mutex.ReleaseMutex();
-         
+
             Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
         }
     }
@@ -345,7 +348,7 @@ class Server
         itemData = getItems.compressedpcktarray;
 
         TerrainController tc = new TerrainController();
-        while (!tc.GenerateEncoding());
+        while (!tc.GenerateEncoding()) ;
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
     }
@@ -355,11 +358,11 @@ class Server
         Int32 clientsockfd;
         accepting = true;
         //Int32 result;
-		Networking.EndPoint ep = new Networking.EndPoint ();
+        Networking.EndPoint ep = new Networking.EndPoint();
 
         while (accepting && numClients < R.Net.MAX_PLAYERS)
         {
-			clientsockfd = tcpServer.AcceptConnection(ref ep);
+            clientsockfd = tcpServer.AcceptConnection(ref ep);
             if (clientsockfd <= 0)
             {
                 LogError("Accept error: " + clientsockfd);
@@ -387,18 +390,27 @@ class Server
         Int32 numSentMap;
         Int32 numSentItem;
         Int32 sockfd = (Int32)clientsockfd;
+        byte[] obstacleDataBuffer = new byte[R.Net.TCP_BUFFER_SIZE];
 
-		numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
+        numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Item Bytes Sent: " + numSentItem);
-		numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
+        numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Map Bytes Sent: " + numSentMap);
 
+        //TODO: Receive obstacle mapping from first client
+
+        //////////////////////////////////
+
+        //If it is the first client
+        if (sockfd == clientSockFdArr[0])
+        {
+            // Receive the obstacle data into buffer
+            tcpServer.Recv(sockfd, obstacleDataBuffer, R.Net.TCP_BUFFERSIZE);
+            //decompress and store the obstacle data
+            obstacleData = TerrainController.decompressByteArray(obstacleDataBuffer);
+        }
+
+        ///////////////////////////////////
         tcpServer.CloseClientSocket(sockfd);
-    }
-
-
-    private static void LogError(string s)
-    {
-        Console.WriteLine(DateTime.Now + " - " + s);
     }
 }
