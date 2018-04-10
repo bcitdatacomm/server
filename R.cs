@@ -1,6 +1,6 @@
 using System;
 
-﻿namespace R
+namespace R
 {
     // Contains all the constants associated with networking and the packet
     public static class Net
@@ -112,7 +112,14 @@ using System;
         // Player Constants
         public static class Players
         {
+            public const int RADIUS = 1;
+        }
 
+        public static class Bullet
+        {
+            public const byte ADD = 1;
+            public const byte REMOVE = 0;
+            public const byte IGNORE = 255;
         }
 
     }
