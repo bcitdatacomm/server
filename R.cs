@@ -112,7 +112,7 @@ namespace R
         // Player Constants
         public static class Players
         {
-
+            public const int RADIUS = 1;
         }
 
         public static class Bullet
