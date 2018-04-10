@@ -23,7 +23,7 @@ class Server
     private static Stack<Bullet> newBullets = new Stack<Bullet>();
     private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
-	
+
     // Game geneartion variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
@@ -348,12 +348,6 @@ class Server
         while (!tc.GenerateEncoding()) ;
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
-
-        //TODO: populate the occupied positions
-
-        //populate the occupied position for town
-        populateOccupiedPosition();
-        //Add the occupied position for town
     }
 
     private static void listenThreadFunc()
@@ -399,5 +393,10 @@ class Server
         numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Map Bytes Sent: " + numSentMap);
         tcpServer.CloseClientSocket(sockfd);
+    }
+
+    private static void LogError(String s)
+    {
+        Console.WriteLine(DateTime.Now + " - " + s);
     }
 }

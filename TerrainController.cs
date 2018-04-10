@@ -174,7 +174,7 @@ public class TerrainController
         }
 
         this.Data = new Encoding() { tiles = map };
-        populateOccupiedPositions();
+        populateOccupiedPosition();
         this.compressData();
 
         return true;
@@ -256,8 +256,29 @@ public class TerrainController
         }
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: isOccupied()
+    --
+    -- DATE: April 10, 2018
+    --
+    -- REVISIONS: N/A
+    --
+    -- DESIGNER: Angus Lam
+    --
+    -- PROGRAMMER: Angus Lam
+    --
+    -- INTERFACE: isOccupied(String coordinates)
+    --              String coordinates : The coordinates
+    --
+    -- RETURNS: Whether or not the position is occupied by a game object
+    -------------------------------------------------------------------------------------------------*/
+    public boolean isOccupied(Bullet b)
+    {
+        return occupiedPosition[b.X + "," b.Z];
+    }
+
     //This populates the occupied positions array using hard coded town coords and the map encoding
-    private populateOccupiedPosition()
+    private void populateOccupiedPosition()
     {
         int buildingRadius = 5;
         int cactusRadius = 1;
@@ -267,7 +288,7 @@ public class TerrainController
         {
             for (int j = 0; j < R.Game.Terrain.DEFAULT_LENGTH; j++)
             {
-                if (this.Data.tiles[i, j] = (byte)TileTypes.BUILDINGS)
+                if (this.Data.tiles[i, j] == (byte)TileTypes.BUILDINGS)
                 {
                     for (int k = i - buildingRadius; k <= i + buildingRadius; k++)
                     {
@@ -277,7 +298,7 @@ public class TerrainController
                         }
                     }
                 }
-                else if (this.Data.tiles[i, j] = (byte)TileTypes.CACTUS)
+                else if (this.Data.tiles[i, j] == (byte)TileTypes.CACTUS)
                 {
                     for (int k = i - cactusRadius; k <= i + cactusRadius; k++)
                     {
@@ -287,7 +308,7 @@ public class TerrainController
                         }
                     }
                 }
-                else if (this.Data.tiles[i, j] = (byte)TileTypes.BUSH)
+                else if (this.Data.tiles[i, j] == (byte)TileTypes.BUSH)
                 {
                     for (int k = i - rockRadius; k <= i + rockRadius; k++)
                     {
