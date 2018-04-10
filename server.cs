@@ -307,6 +307,7 @@ class Server
         List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
 
         mutex.WaitOne();
+        // TODO: There's an IndexOutOfRangeException somewhere here.
         connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
