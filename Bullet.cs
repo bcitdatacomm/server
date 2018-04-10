@@ -1,6 +1,6 @@
 using System;
 
-class Bullet 
+class Bullet
 {
     public int BulletId { get; set; }
     public byte PlayerId { get; set; }
@@ -9,10 +9,10 @@ class Bullet
     public float Size { get; set; }
     private float speed { get; set; }
     private DateTime deathTime;
-    
+
     public float X { get; set; }
     public float Z { get; set; }
-    
+
     private float deltaX;
     private float deltaZ;
 
@@ -76,5 +76,11 @@ class Bullet
         this.Z += this.deltaZ;
 
         return true;
+    }
+
+    public bool isColliding(float x, float z, float r)
+    {
+        double distance = Math.Sqrt((this.X - x) * (this.X - x) + (this.Z - z) * (this.Z - z));
+        return (distance < (this.Size + r));
     }
 }

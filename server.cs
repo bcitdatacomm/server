@@ -11,6 +11,7 @@ class Server
     private static DateTime nextTick = DateTime.Now;
     private static Thread sendThread;
     private static Thread recvThread;
+    private static Thread gameThread;
     private static bool running;
     private static Mutex mutex;
 
@@ -59,6 +60,7 @@ class Server
 
         sendThread = new Thread(sendThreadFunction);
         recvThread = new Thread(recvThreadFunction);
+        gameThread = new Thread(gameThreadFunction);
 
         mutex.WaitOne();
         running = true;
@@ -66,6 +68,7 @@ class Server
 
         sendThread.Start();
         recvThread.Start();
+        gameThread.Start();
     }
 
     private static bool isTick()
@@ -77,6 +80,50 @@ class Server
         }
 
         return false;
+    }
+
+    private static void gameThreadFunction()
+    {
+        while (running)
+        {
+            if (isTick())
+            {
+                List<int> bulletIds = new List<int>();
+
+                // Bullet Collision Check there
+                foreach(KeyValuePair<byte, connectionData> player in players)
+                {
+                    foreach(KeyValuePair<int, Bullet> bullet in bullets)
+                    {
+                        mutex.WaitOne();
+                        if (bullet.Value.isColliding(player.Value.x, player.Value.z, player.Value.r))
+                        {
+                            player.Value.h -= bullet.Value.Damage;
+                            bulletIds.Add(bullet.Key);
+                        }
+                        mutex.ReleaseMutex();
+                    }
+
+                }
+
+                foreach(KeyValuePair<int, Bullet> pair in bullets)
+                {
+                    if (bulletIds.Contains(pair.key))
+                    {
+                        continue;
+                    }
+                    else if (!pair.Value.Update())
+                    {
+                        bulletIds.Add(pair.Key);
+                    }
+                }
+                for(int i = bulletIds.Count; i >= 0; i--)
+                {
+                    bullets.Remove(bulletIds[i]);
+                    //Send delete message
+                }
+            }
+        }
     }
 
     private static void sendThreadFunction()
@@ -95,9 +142,9 @@ class Server
                 mutex.WaitOne();
                 foreach (KeyValuePair<byte, connectionData> pair in players)
                 {
-                    foreach(KeyValuePair<int, BulletInfo> bullet in bullets)
+                    foreach(KeyValuePair<int, Bullet> bullet in bullets)
                     {
-                        Console.WriteLine(bullet.Value);
+
                     }
                     snapshot[R.Net.Offset.HEALTH] = (byte) (pair.Value.h--);
                     server.Send(pair.Value.ep, snapshot, snapshot.Length);
@@ -133,11 +180,6 @@ class Server
         return tmp;
     }
 
-    private static bool CircleCollided(float x1, float y1, float r1, float x2, float y2, float r2)
-    {
-               double distance = Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-               return (distance < (r1 + r2));
-    }
 
     private static void buildSendPacket()
     {
