@@ -84,74 +84,102 @@ class Server
 
     private static void gameThreadFunction()
     {
-        while (running)
+        try
         {
-            if (isTick())
+            while (running)
             {
-                Dictionary<int, int> bulletIds = new Dictionary<int, int>();
-
-                // Loop through players
-                foreach (KeyValuePair<byte, Player> player in players)
+                if (isTick())
                 {
-                    // Loop through bullets
-                    foreach(KeyValuePair<int, Bullet> bullet in bullets)
+                    Dictionary<int, int> bulletIds = new Dictionary<int, int>();
+
+                    // Loop through players
+                    foreach (KeyValuePair<byte, Player> player in players)
                     {
-                        mutex.WaitOne();
-                        // If bullet collides
-                        if (bullet.Value.isColliding(player.Value.x, player.Value.z, player.Value.r))
+                        // Loop through bullets
+                        foreach(KeyValuePair<int, Bullet> bullet in bullets)
                         {
-                            // Subtract health
-                            player.Value.h -= bullet.Value.Damage;
-                            // Signal delete
-                            bulletIds[bullet.Key] = bullet.Key;
+                            mutex.WaitOne();
+                            // If bullet collides
+                            if (bullet.Value.PlayerId == player.Value.id)
+                            {
+                            mutex.ReleaseMutex();
+                            continue; 
+                            }
+
+                            if (bullet.Value.isColliding(player.Value.x, player.Value.z, player.Value.r))
+                            {
+                                // Subtract health
+                                if (player.Value.h < bullet.Value.Damage)
+                                {
+                                    player.Value.h = 0;
+                                }
+                                else
+                                {
+                                    player.Value.h -= bullet.Value.Damage;
+                                }
+                                // Signal delete
+                                bulletIds[bullet.Key] = bullet.Key;
+                            }
+                            mutex.ReleaseMutex();
                         }
-                        mutex.ReleaseMutex();
+
                     }
 
-                }
-
-                foreach (KeyValuePair<int, Bullet> pair in bullets)
-                {
-                    // Update bullet positions
-                    if (!pair.Value.Update())
+                    foreach (KeyValuePair<int, Bullet> pair in bullets)
                     {
-                        // Remove expired bullets
-                        bulletIds[pair.Key] = pair.Key;
+                        // Update bullet positions
+                        if (!pair.Value.Update())
+                        {
+                            // Remove expired bullets
+                            bulletIds[pair.Key] = pair.Key;
+                        }
                     }
-                }
 
-                // Remove bullets
-                foreach (KeyValuePair<int, int> pair in bulletIds)
-                {
-                    bullets[pair.Key].Event = R.Game.Bullet.REMOVE;
-                    newBullets.Push(bullets[pair.Key]);
-                    bullets.Remove(pair.Key);
+                    // Remove bullets
+                    foreach (KeyValuePair<int, int> pair in bulletIds)
+                    {
+                        bullets[pair.Key].Event = R.Game.Bullet.REMOVE;
+                        newBullets.Push(bullets[pair.Key]);
+                        bullets.Remove(pair.Key);
+                    }
                 }
             }
+        }
+        catch (Exception e)
+        {
+            LogError("Game Logic Thread Exception");
+            LogError(e.ToString());
         }
     }
 
     private static void sendThreadFunction()
     {
         Console.WriteLine("Starting Sending Thread");
-
-        while (running)
+        try
         {
-            if (isTick())
+            while (running)
             {
-                buildSendPacket();
-
-                byte[] snapshot = new byte[sendBuffer.Length];
-                Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
-
-                mutex.WaitOne();
-                foreach (KeyValuePair<byte, Player> pair in players)
+                if (isTick())
                 {
-                    snapshot[R.Net.Offset.HEALTH] = pair.Value.h;
-                    server.Send(pair.Value.ep, snapshot, snapshot.Length);
+                    buildSendPacket();
+
+                    byte[] snapshot = new byte[sendBuffer.Length];
+                    Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
+
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<byte, Player> pair in players)
+                    {
+                        snapshot[R.Net.Offset.HEALTH] = pair.Value.h;
+                        server.Send(pair.Value.ep, snapshot, snapshot.Length);
+                    }
+                    mutex.ReleaseMutex();
                 }
-                mutex.ReleaseMutex();
             }
+        }
+        catch (Exception e)
+        {
+            LogError("Send Thread Exception");
+            LogError(e.ToString());
         }
     }
 
@@ -249,37 +277,45 @@ class Server
     {
         Console.WriteLine("Starting Receive Funciton");
 
-        while (running)
+        try
         {
-            if (isTick())
+            while (running)
             {
-                // Receive from up to 30 clients per tick
-                for (int i = 0; i < 30; i++)
+                if (isTick())
                 {
-                    // If there is not data continue
-                    if (!server.Poll())
+                    // Receive from up to 30 clients per tick
+                    for (int i = 0; i < 30; i++)
                     {
-                        continue;
+                        // If there is not data continue
+                        if (!server.Poll())
+                        {
+                            continue;
+                        }
+
+                        // Prepare to receive
+                        EndPoint ep = new EndPoint();
+                        byte[] recvBuffer = new byte[R.Net.Size.CLIENT_TICK];
+
+                        // Receive
+                        int n = server.Recv(ref ep, recvBuffer, R.Net.Size.CLIENT_TICK);
+
+                        // If invalid amount of data was received discard and continue
+                        if (n != R.Net.Size.CLIENT_TICK)
+                        {
+                            LogError("Server received an invalid amount of data.");
+                            continue;
+                        }
+
+                        // Handle incoming data if it is correct
+                        handleBuffer(recvBuffer, ep);
                     }
-
-                    // Prepare to receive
-                    EndPoint ep = new EndPoint();
-                    byte[] recvBuffer = new byte[R.Net.Size.CLIENT_TICK];
-
-                    // Receive
-                    int n = server.Recv(ref ep, recvBuffer, R.Net.Size.CLIENT_TICK);
-
-                    // If invalid amount of data was received discard and continue
-                    if (n != R.Net.Size.CLIENT_TICK)
-                    {
-                        LogError("Server received an invalid amount of data.");
-                        continue;
-                    }
-
-                    // Handle incoming data if it is correct
-                    handleBuffer(recvBuffer, ep);
                 }
             }
+        }
+        catch (Exception e)
+        {
+            LogError("Receive Thread Exception");
+            LogError(e.ToString());
         }
 
         return;
@@ -438,6 +474,13 @@ class Server
             transmitThreadArr[i] = new Thread(transmitThreadFunc);
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
+
+        foreach (Thread t in transmitThreadArr)
+        {
+            t.Join();
+        }
+
+        LogError("All threads joined, Starting game");
     }
 
     private static void transmitThreadFunc(object clientsockfd)
