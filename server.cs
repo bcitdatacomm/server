@@ -7,7 +7,7 @@ using InitGuns;
 
 class Server
 {
-    private const double tickInterval = (double)1000 / (double)128;
+    private const double tickInterval = (double)1000 / (double)64;
     private static DateTime nextTick = DateTime.Now;
     private static Thread sendThread;
     private static Thread recvThread;
@@ -25,7 +25,7 @@ class Server
     private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
 
-    // Game geneartion variables
+    // Game generation variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
     private static Thread listenThread;
@@ -73,12 +73,11 @@ class Server
 
     private static bool isTick()
     {
-        if (DateTime.Now >= nextTick)
+        if (DateTime.Now > nextTick)
         {
             nextTick = DateTime.Now.AddMilliseconds(tickInterval);
             return true;
         }
-
         return false;
     }
 
@@ -99,13 +98,11 @@ class Server
                         mutex.WaitOne();
                         foreach(KeyValuePair<int, Bullet> bullet in bullets)
                         {
-                            
                             // If bullet collides
                             if (bullet.Value.PlayerId == player.Value.id)
                             {
                                 continue; 
                             }
-
                             if (bullet.Value.isColliding(player.Value.x, player.Value.z, R.Game.Players.RADIUS))
                             {
                                 // Subtract health
@@ -289,14 +286,14 @@ class Server
 
     private static void recvThreadFunction()
     {
-        Console.WriteLine("Starting Receive Funciton");
+        Console.WriteLine("Starting Receive Function");
 
         try
         {
             while (running)
             {
-                if (isTick())
-                {
+                // if (isTick())
+                // {
                     // Receive from up to 30 clients per tick
                     for (int i = 0; i < R.Net.MAX_PLAYERS; i++)
                     {
@@ -323,7 +320,7 @@ class Server
                         // Handle incoming data if it is correct
                         handleBuffer(recvBuffer, ep);
                     }
-                }
+                // }
             }
         }
         catch (Exception e)
