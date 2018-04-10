@@ -1,6 +1,6 @@
 using System;
 
-class Bullet
+public class Bullet
 {
     public int BulletId { get; set; }
     public byte PlayerId { get; set; }

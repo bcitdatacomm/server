@@ -24,6 +24,7 @@ class Server
     private static Stack<Bullet> newBullets = new Stack<Bullet>();
     private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
+    private static TerrainController tc = new TerrainController();
 
     // Game generation variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
@@ -91,6 +92,16 @@ class Server
                 {
                     Dictionary<int, int> bulletIds = new Dictionary<int, int>();
 
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<int, Bullet> bullet in bullets)
+                    {
+                        if (tc.IsOccupied(bullet.Value))
+                        {
+                            bulletIds[bullet.Key] = bullet.Key;
+                        }
+                    }
+                    mutex.ReleaseMutex();
+
                     // Loop through players
                     foreach (KeyValuePair<byte, Player> player in players)
                     {
@@ -119,7 +130,6 @@ class Server
                             }
                         }
                         mutex.ReleaseMutex();
-
                     }
 
                     mutex.WaitOne();
@@ -450,7 +460,6 @@ class Server
         InitRandomGuns getItems = new InitRandomGuns(R.Net.MAX_PLAYERS);
         itemData = getItems.compressedpcktarray;
 
-        TerrainController tc = new TerrainController();
         while (!tc.GenerateEncoding()) ;
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);

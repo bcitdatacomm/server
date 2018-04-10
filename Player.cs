@@ -1,6 +1,6 @@
 ﻿using Networking;
 
-class Player
+public class Player
 {
 	public EndPoint ep { get; set; }
 	public byte[] buffer { get; set; }
