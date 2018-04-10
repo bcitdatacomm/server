@@ -7,10 +7,11 @@ using InitGuns;
 
 class Server
 {
-    private const double tickInterval = (double)1000 / (double)128;
+    private const double tickInterval = (double)1000 / (double)64;
     private static DateTime nextTick = DateTime.Now;
     private static Thread sendThread;
     private static Thread recvThread;
+    private static Thread gameThread;
     private static bool running;
     private static Mutex mutex;
 
@@ -19,12 +20,12 @@ class Server
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
 
     private static byte nextPlayerId = 1;
-    private static Dictionary<byte, connectionData> players;
+    private static Dictionary<byte, Player> players;
     private static Stack<Bullet> newBullets = new Stack<Bullet>();
     private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
 
-    // Game geneartion variables
+    // Game generation variables
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
     private static Thread listenThread;
@@ -48,7 +49,7 @@ class Server
 
     public static void pregame()
     {
-        players = new Dictionary<byte, connectionData>();
+        players = new Dictionary<byte, Player>();
         initTCPServer();
     }
 
@@ -59,6 +60,7 @@ class Server
 
         sendThread = new Thread(sendThreadFunction);
         recvThread = new Thread(recvThreadFunction);
+        gameThread = new Thread(gameThreadFunction);
 
         mutex.WaitOne();
         running = true;
@@ -66,42 +68,120 @@ class Server
 
         sendThread.Start();
         recvThread.Start();
+        gameThread.Start();
     }
 
     private static bool isTick()
     {
-        if (DateTime.Now >= nextTick)
+        if (DateTime.Now > nextTick)
         {
             nextTick = DateTime.Now.AddMilliseconds(tickInterval);
             return true;
         }
-
         return false;
+    }
+
+    private static void gameThreadFunction()
+    {
+        try
+        {
+            while (running)
+            {
+                if (isTick())
+                {
+                    Dictionary<int, int> bulletIds = new Dictionary<int, int>();
+
+                    // Loop through players
+                    foreach (KeyValuePair<byte, Player> player in players)
+                    {
+                        // Loop through bullets
+                        mutex.WaitOne();
+                        foreach(KeyValuePair<int, Bullet> bullet in bullets)
+                        {
+                            // If bullet collides
+                            if (bullet.Value.PlayerId == player.Value.id)
+                            {
+                                continue; 
+                            }
+                            if (bullet.Value.isColliding(player.Value.x, player.Value.z, R.Game.Players.RADIUS))
+                            {
+                                // Subtract health
+                                if (player.Value.h < bullet.Value.Damage)
+                                {
+                                    player.Value.h = 0;
+                                }
+                                else
+                                {
+                                    player.Value.h -= bullet.Value.Damage;
+                                }
+                                // Signal delete
+                                bulletIds[bullet.Key] = bullet.Key;
+                            }
+                        }
+                        mutex.ReleaseMutex();
+
+                    }
+
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<int, Bullet> pair in bullets)
+                    {
+                        // Update bullet positions
+                        if (!pair.Value.Update())
+                        {
+                            // Remove expired bullets
+                            bulletIds[pair.Key] = pair.Key;
+                        }
+                    }
+                    mutex.ReleaseMutex();
+
+                    // Remove bullets
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<int, int> pair in bulletIds)
+                    {
+                        bullets[pair.Key].Event = R.Game.Bullet.REMOVE;
+                        newBullets.Push(bullets[pair.Key]);
+                        bullets.Remove(pair.Key);
+                    }
+                    mutex.ReleaseMutex();
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            LogError("Game Logic Thread Exception");
+            LogError(e.ToString());
+        }
     }
 
     private static void sendThreadFunction()
     {
         Console.WriteLine("Starting Sending Thread");
-
         while (running)
         {
-            if (isTick())
+            try 
             {
-                buildSendPacket();
-
-                byte[] snapshot = new byte[sendBuffer.Length];
-                Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
-
-                mutex.WaitOne();
-                foreach (KeyValuePair<byte, connectionData> pair in players)
+                if (isTick())
                 {
-                    server.Send(pair.Value.ep, snapshot, snapshot.Length);
+                    buildSendPacket();
+
+                    byte[] snapshot = new byte[sendBuffer.Length];
+                    Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
+
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<byte, Player> pair in players)
+                    {
+                        snapshot[R.Net.Offset.HEALTH] = pair.Value.h;
+                        server.Send(pair.Value.ep, snapshot, snapshot.Length);
+                    }
+                    mutex.ReleaseMutex();
                 }
-                mutex.ReleaseMutex();
+            }
+            catch (Exception e)
+            {
+                LogError("Send Thread Exception");
+                LogError(e.ToString());
             }
         }
-
-        return;
     }
 
     private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
@@ -128,50 +208,67 @@ class Server
         return tmp;
     }
 
+
     private static void buildSendPacket()
     {
-        mutex.WaitOne();
         int offset = R.Net.Offset.PLAYERS;
         int bulletOffset = R.Net.Offset.BULLETS;
         int weaponOffset = R.Net.Offset.WEAPONS;
 
         // Header
+        mutex.WaitOne();
+
         sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count);
 
         // Player data
-        foreach (KeyValuePair<byte, connectionData> pair in players)
+        foreach (KeyValuePair<byte, Player> pair in players)
         {
             byte id = pair.Key;
-            connectionData player = pair.Value;
+            Player player = pair.Value;
 
             sendBuffer[offset] = id;
             Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
             Array.Copy(BitConverter.GetBytes(player.z), 0, sendBuffer, offset + 5, 4);
             Array.Copy(BitConverter.GetBytes(player.r), 0, sendBuffer, offset + 9, 4);
-
             offset += R.Net.Size.PLAYER_DATA;
         }
+        mutex.ReleaseMutex();
 
         if (newBullets.Count > 0)
         {
             // Bullet data
+            mutex.WaitOne();
             sendBuffer[bulletOffset] = Convert.ToByte(newBullets.Count);
             bulletOffset++;
 
             while (newBullets.Count > 0)
             {
                 Bullet bullet = newBullets.Pop();
+                if (bullet == null) 
+                {
+                    continue;
+                }
                 sendBuffer[bulletOffset] = bullet.PlayerId;
                 Array.Copy(BitConverter.GetBytes(bullet.BulletId), 0, sendBuffer, bulletOffset + 1, 4);
                 sendBuffer[bulletOffset + 5] = bullet.Type;
-                sendBuffer[bulletOffset + 6] = 1;
+                if (bullet.Event != R.Game.Bullet.IGNORE)
+                {
+                    sendBuffer[bulletOffset + 6] = bullet.Event;
+                }
+                else
+                {
+                    LogError("Bullet event is set to ignore");
+                }
                 bulletOffset += 7;
             }
+            mutex.ReleaseMutex();
+            //Console.WriteLine(BitConverter.ToString(sendBuffer));
         }
 
         if (weaponSwapEvents.Count > 0)
         {
             // Weapon swap event
+            mutex.WaitOne();
             sendBuffer[weaponOffset] = Convert.ToByte(weaponSwapEvents.Count);
             weaponOffset++;
 
@@ -182,46 +279,54 @@ class Server
                 Array.Copy(BitConverter.GetBytes(weaponSwap.Item2), 0, sendBuffer, weaponOffset + 1, 4);
                 weaponOffset += 5;
             }
+            mutex.ReleaseMutex();
         }
-
-        mutex.ReleaseMutex();
+        
     }
 
     private static void recvThreadFunction()
     {
-        Console.WriteLine("Starting Receive Funciton");
+        Console.WriteLine("Starting Receive Function");
 
-        while (running)
+        try
         {
-            if (isTick())
+            while (running)
             {
-                // Receive from up to 30 clients per tick
-                for (int i = 0; i < 30; i++)
-                {
-                    // If there is not data continue
-                    if (!server.Poll())
+                // if (isTick())
+                // {
+                    // Receive from up to 30 clients per tick
+                    for (int i = 0; i < R.Net.MAX_PLAYERS; i++)
                     {
-                        continue;
+                        // If there is not data continue
+                        if (!server.Poll())
+                        {
+                            continue;
+                        }
+
+                        // Prepare to receive
+                        EndPoint ep = new EndPoint();
+                        byte[] recvBuffer = new byte[R.Net.Size.CLIENT_TICK];
+
+                        // Receive
+                        int n = server.Recv(ref ep, recvBuffer, R.Net.Size.CLIENT_TICK);
+
+                        // If invalid amount of data was received discard and continue
+                        if (n != R.Net.Size.CLIENT_TICK)
+                        {
+                            LogError("Server received an invalid amount of data.");
+                            continue;
+                        }
+
+                        // Handle incoming data if it is correct
+                        handleBuffer(recvBuffer, ep);
                     }
-
-                    // Prepare to receive
-                    EndPoint ep = new EndPoint();
-                    byte[] recvBuffer = new byte[R.Net.Size.CLIENT_TICK];
-
-                    // Receive
-                    int n = server.Recv(ref ep, recvBuffer, R.Net.Size.CLIENT_TICK);
-
-                    // If invalid amount of data was received discard and continue
-                    if (n != R.Net.Size.CLIENT_TICK)
-                    {
-                        LogError("Server received an invalid amount of data.");
-                        continue;
-                    }
-
-                    // Handle incoming data if it is correct
-                    handleBuffer(recvBuffer, ep);
-                }
+                // }
             }
+        }
+        catch (Exception e)
+        {
+            LogError("Receive Thread Exception");
+            LogError(e.ToString());
         }
 
         return;
@@ -272,8 +377,9 @@ class Server
     {
         if (bulletType != 0)
         {
-            connectionData player = players[playerId];
+            Player player = players[playerId];
             Bullet bullet = new Bullet(bulletId, bulletType, player);
+            bullet.Event = R.Game.Bullet.ADD;
             mutex.WaitOne();
             newBullets.Push(bullet);
             bullets[bulletId] = bullet;
@@ -297,7 +403,7 @@ class Server
 
             weaponSwapEvents.Push(Tuple.Create(playerId, weaponId));
             mutex.ReleaseMutex();
-         
+
             Console.WriteLine("Player {0} changed weapon to -> Weapon: ID - {1}, Type - {2}", playerId, weaponId, weaponType);
         }
     }
@@ -307,7 +413,7 @@ class Server
         List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
 
         mutex.WaitOne();
-        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
+        Player newPlayer = new Player(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
         mutex.ReleaseMutex();
@@ -315,7 +421,7 @@ class Server
         sendInitPacket(newPlayer);
     }
 
-    private static void sendInitPacket(connectionData newPlayer)
+    private static void sendInitPacket(Player newPlayer)
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
 
@@ -379,6 +485,13 @@ class Server
             transmitThreadArr[i] = new Thread(transmitThreadFunc);
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
+
+        foreach (Thread t in transmitThreadArr)
+        {
+            t.Join();
+        }
+
+        LogError("All threads joined, Starting game");
     }
 
     private static void transmitThreadFunc(object clientsockfd)

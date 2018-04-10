@@ -1,13 +1,13 @@
 using System;
 
-﻿namespace R
+namespace R
 {
     // Contains all the constants associated with networking and the packet
     public static class Net
     {
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
-	public const ushort MAX_PLAYERS = 2;
+	    public const ushort MAX_PLAYERS = 3;
 
         // Contains constants associated with the header type of the packet
         public static class Header
@@ -112,7 +112,14 @@ using System;
         // Player Constants
         public static class Players
         {
+            public const int RADIUS = 1;
+        }
 
+        public static class Bullet
+        {
+            public const byte ADD = 1;
+            public const byte REMOVE = 0;
+            public const byte IGNORE = 255;
         }
 
     }

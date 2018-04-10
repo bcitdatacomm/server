@@ -1,6 +1,6 @@
 ﻿using Networking;
 
-class connectionData
+class Player
 {
 	public EndPoint ep { get; set; }
 	public byte[] buffer { get; set; }
@@ -9,12 +9,12 @@ class connectionData
 	public float x { get; set; }
 	public float z { get; set; }
 	public float r { get; set; }
-	public int h { get; set; }
+	public byte h { get; set; }
 
 	public int currentWeaponId { get; set; }
 	public byte currentWeaponType { get; set; }
 
-	public connectionData(EndPoint ep, byte id, float x, float z)
+	public Player(EndPoint ep, byte id, float x, float z)
 	{
 		this.ep = ep;
 		this.id = id;
