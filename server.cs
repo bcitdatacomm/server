@@ -31,9 +31,6 @@ class Server
     private static Thread listenThread;
     private static byte[] itemData = new byte[R.Net.TCP_BUFFER_SIZE];
     private static byte[] mapData = new byte[R.Net.TCP_BUFFER_SIZE];
-    ///////////////////
-    private static byte[] obstacleData = new byte[R.Net.TCP_BUFFER_SIZE];
-    ///////////////////
     private static Int32 numClients = 0;
     private static bool accepting = false;
     private static TCPServer tcpServer;
@@ -43,8 +40,6 @@ class Server
     public static void Main()
     {
         Console.WriteLine("Starting server");
-		//populate the occupied position for town
-		populateOccupiedPosition();
         mutex = new Mutex();
 
         pregame();
@@ -354,6 +349,12 @@ class Server
         while (!tc.GenerateEncoding()) ;
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
+
+        //TODO: populate the occupied positions
+
+        //populate the occupied position for town
+        populateOccupiedPosition();
+        //Add the occupied position for town
     }
 
     private static void listenThreadFunc()
@@ -398,26 +399,67 @@ class Server
         LogError("Num Item Bytes Sent: " + numSentItem);
         numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Map Bytes Sent: " + numSentMap);
-
-        //TODO: Receive obstacle mapping from first client
-
-        //////////////////////////////////
-
-        //If it is the first client
-        if (sockfd == clientSockFdArr[0])
-        {
-            // Receive the obstacle data into buffer
-            tcpServer.Recv(sockfd, obstacleDataBuffer, R.Net.TCP_BUFFERSIZE);
-            //decompress and store the obstacle data
-            obstacleData = TerrainController.decompressByteArray(obstacleDataBuffer);
-        }
-
-        ///////////////////////////////////
         tcpServer.CloseClientSocket(sockfd);
     }
 
-    private populateOccupiedPosition()
+    private populateOccupiedPosition(TerrainController tc)
     {
+        int buildingRadius = 5;
+        int cactusRadius = 1;
+        int rockRadius = 2;
+        //int wallRadius = 5;
+
+        //Grab the terrain controller encoding
+        byte[,] map = tc.Data.tiles;
+
+        for (int i = 0; i < R.Game.Terrain.DEFAULT_WIDTH; i++)
+        {
+            for (int j = 0; j < R.Game.Terrain.DEFAULT_LENGTH; j++)
+            {
+                if (map[i, j] = (byte)TileTypes.BUILDINGS)
+                {
+                    for (int k = i - buildingRadius; k <= i + buildingRadius; k++)
+                    {
+                        for (int m = j - buildingRadius; m <= j + buildingRadius; m++)
+                        {
+                            if (k != i && m != j)
+                            {
+                                occupiedPosition.Add(k + "," + m, true);
+                            }
+                        }
+                    }
+                }
+                else if (map[i, j] = (byte)TileTypes.CACTUS)
+                {
+                    for (int k = i - cactusRadius; k <= i + cactusRadius; k++)
+                    {
+                        for (int m = j - cactusRadius; m <= j + cactusRadius; m++)
+                        {
+                            if (k != i && m != j)
+                            {
+                                occupiedPosition.Add(k + "," + m, true);
+                            }
+                        }
+                    }
+                }
+                else if (map[i, j] = (byte)TileTypes.BUSH)
+                {
+                    for (int k = i - rockRadius; k <= i + rockRadius; k++)
+                    {
+                        for (int m = j - rockRadius; m <= j + rockRadius; m++)
+                        {
+                            if (k != i && m != j)
+                            {
+                                occupiedPosition.Add(k + "," + m, true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Add the occupied positions from encoding
+        //Add the town
         occupiedPosition.Add("-65,-54", true);
         occupiedPosition.Add("-65,-53", true);
         occupiedPosition.Add("-65,-52", true);
