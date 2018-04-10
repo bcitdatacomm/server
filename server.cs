@@ -29,8 +29,8 @@ class Server
     private static Int32[] clientSockFdArr = new Int32[R.Net.MAX_PLAYERS];
     private static Thread[] transmitThreadArr = new Thread[R.Net.MAX_PLAYERS];
     private static Thread listenThread;
-    private static byte[] itemData  = new byte[R.Net.TCP_BUFFER_SIZE];
-    private static byte[] mapData   = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static byte[] itemData = new byte[R.Net.TCP_BUFFER_SIZE];
+    private static byte[] mapData = new byte[R.Net.TCP_BUFFER_SIZE];
     private static Int32 numClients = 0;
     private static bool accepting = false;
     private static TCPServer tcpServer;
@@ -451,7 +451,7 @@ class Server
         itemData = getItems.compressedpcktarray;
 
         TerrainController tc = new TerrainController();
-        while (!tc.GenerateEncoding());
+        while (!tc.GenerateEncoding()) ;
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
     }
@@ -505,17 +505,16 @@ class Server
         Int32 numSentMap;
         Int32 numSentItem;
         Int32 sockfd = (Int32)clientsockfd;
+        byte[] obstacleDataBuffer = new byte[R.Net.TCP_BUFFER_SIZE];
 
-		numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
+        numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Item Bytes Sent: " + numSentItem);
-		numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
+        numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Map Bytes Sent: " + numSentMap);
-
         tcpServer.CloseClientSocket(sockfd);
     }
 
-
-    private static void LogError(string s)
+    private static void LogError(String s)
     {
         Console.WriteLine(DateTime.Now + " - " + s);
     }
