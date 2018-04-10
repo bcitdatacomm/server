@@ -4,7 +4,7 @@ class Bullet
 {
     public int BulletId { get; set; }
     public byte PlayerId { get; set; }
-    public int Damage { get; set; }
+    public byte Damage { get; set; }
     public byte Type { get; set; }
     public float Size { get; set; }
     private float speed { get; set; }
@@ -16,7 +16,9 @@ class Bullet
     private float deltaX;
     private float deltaZ;
 
-    public Bullet (int id, byte type, connectionData player)
+    public byte Event { get; set; }
+
+    public Bullet (int id, byte type, Player player)
 	{
 		this.BulletId = id;
         this.PlayerId = player.id;
@@ -24,6 +26,8 @@ class Bullet
 
         this.X = player.x;
         this.Z = player.z;
+
+        this.Event = R.Game.Bullet.IGNORE;
 
         DateTime currentTime = DateTime.Now;
 

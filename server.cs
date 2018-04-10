@@ -20,7 +20,7 @@ class Server
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
 
     private static byte nextPlayerId = 1;
-    private static Dictionary<byte, connectionData> players;
+    private static Dictionary<byte, Player> players;
     private static Stack<Bullet> newBullets = new Stack<Bullet>();
     private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
@@ -49,7 +49,7 @@ class Server
 
     public static void pregame()
     {
-        players = new Dictionary<byte, connectionData>();
+        players = new Dictionary<byte, Player>();
         initTCPServer();
     }
 
@@ -88,39 +88,44 @@ class Server
         {
             if (isTick())
             {
-                List<int> bulletIds = new List<int>();
+                Dictionary<int, int> bulletIds = new Dictionary<int, int>();
 
-                // Bullet Collision Check there
-                foreach(KeyValuePair<byte, connectionData> player in players)
+                // Loop through players
+                foreach (KeyValuePair<byte, Player> player in players)
                 {
+                    // Loop through bullets
                     foreach(KeyValuePair<int, Bullet> bullet in bullets)
                     {
                         mutex.WaitOne();
+                        // If bullet collides
                         if (bullet.Value.isColliding(player.Value.x, player.Value.z, player.Value.r))
                         {
+                            // Subtract health
                             player.Value.h -= bullet.Value.Damage;
-                            bulletIds.Add(bullet.Key);
+                            // Signal delete
+                            bulletIds[bullet.Key] = bullet.Key;
                         }
                         mutex.ReleaseMutex();
                     }
 
                 }
 
-                foreach(KeyValuePair<int, Bullet> pair in bullets)
+                foreach (KeyValuePair<int, Bullet> pair in bullets)
                 {
-                    if (bulletIds.Contains(pair.key))
+                    // Update bullet positions
+                    if (!pair.Value.Update())
                     {
-                        continue;
-                    }
-                    else if (!pair.Value.Update())
-                    {
-                        bulletIds.Add(pair.Key);
+                        // Remove expired bullets
+                        bulletIds[pair.Key] = pair.Key;
                     }
                 }
-                for(int i = bulletIds.Count; i >= 0; i--)
+
+                // Remove bullets
+                foreach (KeyValuePair<int, int> pair in bulletIds)
                 {
-                    bullets.Remove(bulletIds[i]);
-                    //Send delete message
+                    bullets[pair.Key].Event = R.Game.Bullet.REMOVE;
+                    newBullets.Push(bullets[pair.Key]);
+                    bullets.Remove(pair.Key);
                 }
             }
         }
@@ -140,20 +145,14 @@ class Server
                 Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
 
                 mutex.WaitOne();
-                foreach (KeyValuePair<byte, connectionData> pair in players)
+                foreach (KeyValuePair<byte, Player> pair in players)
                 {
-                    foreach(KeyValuePair<int, Bullet> bullet in bullets)
-                    {
-
-                    }
-                    snapshot[R.Net.Offset.HEALTH] = (byte) (pair.Value.h--);
+                    snapshot[R.Net.Offset.HEALTH] = pair.Value.h;
                     server.Send(pair.Value.ep, snapshot, snapshot.Length);
                 }
                 mutex.ReleaseMutex();
             }
         }
-
-        return;
     }
 
     private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
@@ -192,10 +191,10 @@ class Server
         sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count);
 
         // Player data
-        foreach (KeyValuePair<byte, connectionData> pair in players)
+        foreach (KeyValuePair<byte, Player> pair in players)
         {
             byte id = pair.Key;
-            connectionData player = pair.Value;
+            Player player = pair.Value;
 
             sendBuffer[offset] = id;
             Array.Copy(BitConverter.GetBytes(player.x), 0, sendBuffer, offset + 1, 4);
@@ -216,7 +215,14 @@ class Server
                 sendBuffer[bulletOffset] = bullet.PlayerId;
                 Array.Copy(BitConverter.GetBytes(bullet.BulletId), 0, sendBuffer, bulletOffset + 1, 4);
                 sendBuffer[bulletOffset + 5] = bullet.Type;
-                sendBuffer[bulletOffset + 6] = 1;
+                if (bullet.Event != R.Game.Bullet.IGNORE)
+                {
+                    sendBuffer[bulletOffset + 6] = bullet.Event;
+                }
+                else
+                {
+                    LogError("Bullet event is set to ignore");
+                }
                 bulletOffset += 7;
             }
         }
@@ -324,8 +330,9 @@ class Server
     {
         if (bulletType != 0)
         {
-            connectionData player = players[playerId];
+            Player player = players[playerId];
             Bullet bullet = new Bullet(bulletId, bulletType, player);
+            bullet.Event = R.Game.Bullet.ADD;
             mutex.WaitOne();
             newBullets.Push(bullet);
             bullets[bulletId] = bullet;
@@ -359,7 +366,7 @@ class Server
         List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
 
         mutex.WaitOne();
-        connectionData newPlayer = new connectionData(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
+        Player newPlayer = new Player(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
         mutex.ReleaseMutex();
@@ -367,7 +374,7 @@ class Server
         sendInitPacket(newPlayer);
     }
 
-    private static void sendInitPacket(connectionData newPlayer)
+    private static void sendInitPacket(Player newPlayer)
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
 

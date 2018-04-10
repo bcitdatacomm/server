@@ -115,6 +115,13 @@ namespace R
 
         }
 
+        public static class Bullet
+        {
+            public const byte ADD = 1;
+            public const byte REMOVE = 0;
+            public const byte IGNORE = 255;
+        }
+
     }
 
     public static class Type
