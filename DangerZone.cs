@@ -47,7 +47,7 @@ public class DangerZone
     private Int32 tickCount; // for danger zone
 
     /*------------------------------------------------------------------
-	-- FUNCTION:	Server
+	-- FUNCTION:	DangerZone
 	--
     -- DATE:		April 11, 2018
     --
@@ -55,15 +55,13 @@ public class DangerZone
     --
     -- PROGRAMMER:	Jeremy Lee
 	--
-	-- INTERFACE:	public Server(void)
+	-- INTERFACE:	public DangerZone(void)
 	--
 	-- ARGUMENT:    void
 	--
 	-- RETURNS:	    void
 	--
 	-- NOTES:
-	-- A Server class constructor to instantiate an instance.
-	-- Sets values of this instance's member variables.
 	------------------------------------------------------------------*/
     public DangerZone()
     {
@@ -79,7 +77,7 @@ public class DangerZone
     }
 
     /*------------------------------------------------------------------
-    -- FUNCTION:	Server
+    -- FUNCTION:	Update
     --
     -- DATE:		April 11, 2018
     --
@@ -87,15 +85,13 @@ public class DangerZone
     --
     -- PROGRAMMER:	Jeremy Lee
     --
-    -- INTERFACE:	public Server(void)
+    -- INTERFACE:	public void Update(void)
     --
     -- ARGUMENT:    void
     --
     -- RETURNS:	    void
     --
     -- NOTES:
-    -- A Server class constructor to instantiate an instance.
-    -- Sets values of this instance's member variables.
     ------------------------------------------------------------------*/
     public void Update()
     {
@@ -164,13 +160,11 @@ public class DangerZone
     --
     -- INTERFACE:	public void HandlePlayer(Player player)
     --
-    -- ARGUMENT:    void
+    -- ARGUMENT:    player
     --
     -- RETURNS:	    void
     --
     -- NOTES:
-    -- A Server class constructor to instantiate an instance.
-    -- Sets values of this instance's member variables.
     ------------------------------------------------------------------*/
     public void HandlePlayer(Player player)
     {
@@ -188,7 +182,7 @@ public class DangerZone
     }
 
     /*------------------------------------------------------------------
-    -- FUNCTION:	Server
+    -- FUNCTION:	ToBytes
     --
     -- DATE:		April 11, 2018
     --
@@ -196,15 +190,13 @@ public class DangerZone
     --
     -- PROGRAMMER:	Jeremy Lee
     --
-    -- INTERFACE:	public Server(void)
+    -- INTERFACE:	public byte[] ToBytes(void)
     --
     -- ARGUMENT:    void
     --
-    -- RETURNS:	    void
+    -- RETURNS:	    byte[]
     --
     -- NOTES:
-    -- A Server class constructor to instantiate an instance.
-    -- Sets values of this instance's member variables.
     ------------------------------------------------------------------*/
     public byte[] ToBytes()
     {
