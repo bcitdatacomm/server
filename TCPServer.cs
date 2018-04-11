@@ -13,9 +13,9 @@ namespace Networking
 			tcpServer = ServerLibrary.TCPServer_CreateServer();
 		}
 
-		public Int32 Init(ushort port)
+		public Int32 Init(ushort port, ushort timeout)
 		{
-			serverSocket = ServerLibrary.TCPServer_initServer(tcpServer, port);
+			serverSocket = ServerLibrary.TCPServer_initServer(tcpServer, port, timeout);
 
 			return serverSocket;
 		}

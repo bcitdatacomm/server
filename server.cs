@@ -467,7 +467,7 @@ class Server
     private static void initTCPServer()
     {
         tcpServer = new TCPServer();
-        tcpServer.Init(R.Net.PORT);
+        tcpServer.Init(R.Net.PORT, R.Net.TIMEOUT);
         listenThread = new Thread(listenThreadFunc);
         listenThread.Start();
         listenThread.Join();
