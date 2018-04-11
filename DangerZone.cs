@@ -124,7 +124,8 @@ public class DangerZone
             }
             else if ((gameTimer <= R.Game.GAME_TIMER_INIT && gameTimer > gameTimerPhase1Start)
             || (gameTimer <= gameTimerPhase1End && gameTimer > gameTimerPhase2Start)
-            || (gameTimer <= gameTimerPhase2End && gameTimer > gameTimerPhase3Start)) // break 1, 2, 3
+            || (gameTimer <= gameTimerPhase2End && gameTimer > gameTimerPhase3Start)
+            || (gameTimer <= 0)) // break 1, 2, 3
             {
                 ratioToShrink = 0;
                 distToNewX = 0;
