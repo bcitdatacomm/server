@@ -46,7 +46,7 @@ namespace Networking {
         public static extern IntPtr TCPServer_CreateServer();
 
         [DllImport("Network")]
-        public static extern Int32 TCPServer_initServer(IntPtr serverPtr, ushort port);
+        public static extern Int32 TCPServer_initServer(IntPtr serverPtr, ushort port, ushort timeout);
 
         [DllImport("Network")]
         public static extern Int32 TCPServer_acceptConnection(IntPtr serverPtr, EndPoint * ep);
