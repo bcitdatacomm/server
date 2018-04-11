@@ -96,6 +96,11 @@ public class DangerZone
     public void Update()
     {
         gameTimer = gameTimer - (float)R.Game.TICK_INTERVAL;
+		if (gameTimer < 0)
+		{
+			gameTimer = 0;
+		}
+		
         tickCount++; // to check tick
 
         if (tickCount == R.Game.TICK_RATE)
@@ -142,7 +147,11 @@ public class DangerZone
             Console.WriteLine(dangerZoneX + " += " + distToNewX + " / (" + timeUnitToShrink + " / 1000)");
             Console.WriteLine(dangerZoneZ + " += " + distToNewZ + " / (" + timeUnitToShrink + " / 1000)");
             dangerZoneRadius -= ((fullRad * ratioToShrink) / (timeUnitToShrink / 1000)); // the division for converting the time unit to sec
-            dangerZoneX += distToNewX / (timeUnitToShrink / 1000);
+            if (dangerZoneRadius < 0)
+			{
+				dangerZoneRadius = 0;
+			}
+			dangerZoneX += distToNewX / (timeUnitToShrink / 1000);
             dangerZoneZ += distToNewZ / (timeUnitToShrink / 1000);
 
             tickCount = 0; // reset tickCount
