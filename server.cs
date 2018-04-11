@@ -112,7 +112,7 @@ class Server
                             // If bullet collides
                             if (bullet.Value.PlayerId == player.Value.id)
                             {
-                                continue; 
+                                continue;
                             }
                             if (bullet.Value.isColliding(player.Value.x, player.Value.z, R.Game.Players.RADIUS))
                             {
@@ -168,7 +168,7 @@ class Server
         Console.WriteLine("Starting Sending Thread");
         while (running)
         {
-            try 
+            try
             {
                 if (isTick())
                 {
@@ -254,7 +254,7 @@ class Server
             while (newBullets.Count > 0)
             {
                 Bullet bullet = newBullets.Pop();
-                if (bullet == null) 
+                if (bullet == null)
                 {
                     continue;
                 }
@@ -291,7 +291,7 @@ class Server
             }
             mutex.ReleaseMutex();
         }
-        
+
     }
 
     private static void recvThreadFunction()
@@ -500,10 +500,13 @@ class Server
             transmitThreadArr[i] = new Thread(transmitThreadFunc);
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
-
+        
         foreach (Thread t in transmitThreadArr)
         {
-            t.Join();
+            if (t != null)
+            {
+                t.Join();
+            }
         }
 
         LogError("All threads joined, Starting game");
