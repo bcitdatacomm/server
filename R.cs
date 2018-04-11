@@ -7,7 +7,7 @@ namespace R
     {
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
-	    public const ushort MAX_PLAYERS = 2;
+	    public const ushort MAX_PLAYERS = 11;
 
         // Contains constants associated with the header type of the packet
         public static class Header
@@ -81,6 +81,8 @@ namespace R
     // Contains Constants Related to the game
     public static class Game
     {
+        public const int TICK_RATE = 64;
+        public const double TICK_INTERVAL = (double)1000 / (double)TICK_RATE;
         public const float GAME_TIMER_INIT = 900000f;
 
         // Terrain Constants
@@ -124,11 +126,11 @@ namespace R
             public const byte IGNORE = 255;
         }
 
+        // Danger zone constant
         public static class DangerZone
         {
             public const float ZONE_CENTER_POOL_WIDTH = R.Game.Terrain.DEFAULT_WIDTH - 250;
             public const float ZONE_CENTER_POOL_HEIGHT = R.Game.Terrain.DEFAULT_LENGTH - 250;
-            public const Int32 TACK_PER_SEC = 128;
             public const float RAD_RATE_PHASE1 = 0.2f; // ratio of radius to reduce per time unit -- phase 1
             public const float RAD_RATE_PHASE2 = 0.3f; // ratio of radius to reduce per time unit -- phase 1
             public const float RAD_RATE_PHASE3 = 0.5f; // ratio of radius to reduce per time unit -- phase 1

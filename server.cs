@@ -7,7 +7,6 @@ using InitGuns;
 
 class Server
 {
-    private const double tickInterval = (double)1000 / (double)64;
     private static DateTime nextTick = DateTime.Now;
     private static Thread sendThread;
     private static Thread recvThread;
@@ -15,16 +14,12 @@ class Server
     private static bool running;
     private static Mutex mutex;
 
-    private static float gameTimer;
-    private static float dangerZoneX;
-    private static float dangerZoneZ;
-    private static float dangerZoneRadius;
-    private static bool overtime = false;
-    private static Random random = new Random();
-
     private static Networking.Server server;
 
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
+
+    private static bool overtime = false;
+    private static Random random = new Random();
 
     private static byte nextPlayerId = 1;
     private static Dictionary<byte, Player> players;
@@ -43,29 +38,8 @@ class Server
     private static bool accepting = false;
     private static TCPServer tcpServer;
 
+    private static DangerZone dangerZone;
     private static SpawnPointGenerator spawnPointGenerator = new SpawnPointGenerator();
-
-    private static Int32 tickCount = 0; // for danger zone
-    private static float fullRad = 0;
-    private static float zoneCenterPollWidth = R.Game.DangerZone.ZONE_CENTER_POOL_WIDTH;
-    private static float zoneCenterPollHeight = R.Game.DangerZone.ZONE_CENTER_POOL_HEIGHT;
-    private static float tickPerSec = R.Game.DangerZone.TACK_PER_SEC;
-    private static float radRatePhase1 = R.Game.DangerZone.RAD_RATE_PHASE1;
-    private static float radRatePhase2 = R.Game.DangerZone.RAD_RATE_PHASE2;
-    private static float radRatePhase3 = R.Game.DangerZone.RAD_RATE_PHASE3;
-    private static float timeUnitToShrink = R.Game.DangerZone.TIME_UNIT_TO_SHRINK;
-    private static float timeUnitToPause = R.Game.DangerZone.TIME_UNIT_TO_PAUSE;
-    private static float gameTimerPhase1Start = R.Game.DangerZone.GAME_TIMER_PHASE1_START;
-    private static float gameTimerPhase1End = R.Game.DangerZone.GAME_TIMER_PHASE1_END;
-    private static float gameTimerPhase2Start = R.Game.DangerZone.GAME_TIMER_PHASE2_START;
-    private static float gameTimerPhase2End = R.Game.DangerZone.GAME_TIMER_PHASE2_END;
-    private static float gameTimerPhase3Start = R.Game.DangerZone.GAME_TIMER_PHASE3_START;
-    private static float gameTimerPhase3End = R.Game.DangerZone.GAME_TIMER_PHASE3_END;
-    private static bool phaseEntered = false;
-    private static float dangerZoneXNew = 0;
-    private static float dangerZoneZNew = 0;
-    private static float distToNewX = 0;
-    private static float distToNewZ = 0;
 
     public static void Main()
     {
@@ -96,9 +70,6 @@ class Server
         running = true;
         mutex.ReleaseMutex();
 
-        // 15 minutes in milliseconds
-        gameTimer = R.Game.GAME_TIMER_INIT;
-
         sendThread.Start();
         recvThread.Start();
         gameThread.Start();
@@ -108,7 +79,7 @@ class Server
     {
         if (DateTime.Now > nextTick)
         {
-            nextTick = DateTime.Now.AddMilliseconds(tickInterval);
+            nextTick = DateTime.Now.AddMilliseconds(R.Game.TICK_INTERVAL);
             return true;
         }
         return false;
@@ -122,7 +93,7 @@ class Server
             {
                 if (isTick())
                 {
-                    updateTimer();
+                    dangerZone.Update();
 
                     Dictionary<int, int> bulletIds = new Dictionary<int, int>();
 
@@ -133,6 +104,13 @@ class Server
                         {
                             bulletIds[bullet.Key] = bullet.Key;
                         }
+                    }
+                    mutex.ReleaseMutex();
+
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<byte, Player> player in players)
+                    {
+                        dangerZone.HandlePlayer(player.Value);
                     }
                     mutex.ReleaseMutex();
 
@@ -157,7 +135,7 @@ class Server
                                 }
                                 else
                                 {
-                                    player.Value.h -= bullet.Value.Damage;
+                                    player.Value.TakeDamage(bullet.Value.Damage);
                                 }
                                 // Signal delete
                                 bulletIds[bullet.Key] = bullet.Key;
@@ -211,7 +189,7 @@ class Server
                     byte[] snapshot = new byte[sendBuffer.Length];
                     Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
 
-                    foreach (KeyValuePair<byte, connectionData> pair in players)
+                    foreach (KeyValuePair<byte, Player> pair in players)
                     {
                         updateHealthPacket(pair.Value, snapshot);
                         server.Send(pair.Value.ep, snapshot, snapshot.Length);
@@ -250,78 +228,13 @@ class Server
         return tmp;
     }
 
-    private static void updateTimer()
-    {
-        float ratioToShrink = 0;
-
-        gameTimer = gameTimer - (float)tickInterval;
-        tickCount++; // to check tick
-
-        if (tickCount == R.Game.DangerZone.TACK_PER_SEC)
-        {
-            if (gameTimer.Equals(gameTimerPhase1Start) && phaseEntered == false) // phase 1
-            {
-                Console.WriteLine("PHASE 1 Entered");
-                ratioToShrink = radRatePhase1;
-                phaseEntered = true;
-            }
-            else if (gameTimer.Equals(gameTimerPhase2Start) && phaseEntered == false) // phase 2
-            {
-                Console.WriteLine("PHASE 2 Entered");
-                ratioToShrink = radRatePhase2;
-                phaseEntered = true;
-            }
-            else if (gameTimer.Equals(gameTimerPhase3Start) && phaseEntered == false) // phase 3
-            {
-                Console.WriteLine("PHASE 3 Entered");
-                ratioToShrink = radRatePhase3;
-                phaseEntered = true;
-            }
-            else if ((gameTimer <= R.Game.GAME_TIMER_INIT && gameTimer > gameTimerPhase1Start)
-            || (gameTimer <= gameTimerPhase1End && gameTimer > gameTimerPhase2Start)
-            || (gameTimer <= gameTimerPhase2End && gameTimer > gameTimerPhase3Start)) // break 1, 2, 3
-            {
-                ratioToShrink = 0;
-                distToNewX = 0;
-                distToNewZ = 0;
-                phaseEntered = false;
-            }
-
-            if (phaseEntered == true)
-            {
-                dangerZoneXNew = (float)((random.NextDouble() * zoneCenterPollWidth) - (zoneCenterPollWidth / 2));
-                dangerZoneZNew = (float)((random.NextDouble() * zoneCenterPollHeight) - (zoneCenterPollHeight / 2));
-                distToNewX = dangerZoneXNew - dangerZoneX;
-                distToNewZ = dangerZoneZNew - dangerZoneZ;
-                phaseEntered = false;
-            }
-
-            Console.WriteLine(dangerZoneRadius + " -= (" + fullRad + " * " + ratioToShrink + ") / (" + timeUnitToShrink + "/ 1000)");
-            Console.WriteLine(dangerZoneRadius + " -= (" + fullRad + " * " + ratioToShrink + ") / (" + timeUnitToShrink + "/ 1000)");
-            Console.WriteLine(dangerZoneRadius + " -= (" + fullRad + " * " + ratioToShrink + ") / (" + timeUnitToShrink + "/ 1000)");
-            dangerZoneRadius -= ((fullRad * ratioToShrink) / (timeUnitToShrink / 1000)); // the division for converting the time unit to sec
-            dangerZoneX += distToNewX / (timeUnitToShrink / 1000);
-            dangerZoneZ += distToNewZ / (timeUnitToShrink / 1000);
-
-            tickCount = 0;
-        }
-
-        mutex.WaitOne();
-            Array.Copy(BitConverter.GetBytes(gameTimer), 0, sendBuffer, R.Net.Offset.TIME, 4);
-            Array.Copy(BitConverter.GetBytes(dangerZoneX), 0, sendBuffer, R.Net.Offset.DANGER_ZONE, 4);
-            Array.Copy(BitConverter.GetBytes(dangerZoneZ), 0, sendBuffer, R.Net.Offset.DANGER_ZONE + 4, 4);
-            Array.Copy(BitConverter.GetBytes(dangerZoneRadius), 0, sendBuffer, R.Net.Offset.DANGER_ZONE + 8, 4);
-        mutex.ReleaseMutex();
-    }
-
-    private static void updateHealthPacket(connectionData player, byte[] snapshot)
+    private static void updateHealthPacket(Player player, byte[] snapshot)
     {
         int offset = R.Net.Offset.HEALTH;
         mutex.WaitOne();
         Array.Copy(BitConverter.GetBytes(player.h), 0, snapshot, offset, 1);
         mutex.ReleaseMutex();
     }
-
 
     private static void buildSendPacket()
     {
@@ -331,8 +244,10 @@ class Server
 
         // Header
         mutex.WaitOne();
-
         sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count);
+
+        // Danger zone
+        Array.Copy(dangerZone.ToBytes(), 0, sendBuffer, R.Net.Offset.DANGER_ZONE, 16);
 
         // Player data
         foreach (KeyValuePair<byte, Player> pair in players)
@@ -395,7 +310,6 @@ class Server
             }
             mutex.ReleaseMutex();
         }
-
     }
 
     private static void recvThreadFunction()
@@ -484,22 +398,7 @@ class Server
         players[id].x = x;
         players[id].z = z;
         players[id].r = r;
-        hadleDangerZone(id);
         mutex.ReleaseMutex();
-    }
-
-    private static void hadleDangerZone(byte playerId)
-    {
-        // float dzMinX = dangerZoneX - dangerZoneRadius;
-        // float dzMaxX = dangerZoneX + dangerZoneRadius;
-        // float dzMinZ = dangerZoneZ - dangerZoneRadius;
-        // float dzMaxZ = dangerZoneZ + dangerZoneRadius;
-        // if (players[playerId].x < dzMinX || players[playerId].x < dzMaxX
-        //     || players[playerId].z < dzMinZ || players[playerId].z < dzMaxZ)
-        // {
-        //     // decrease health
-        //     player.h -= 1;
-        // }
     }
 
     private static void handleIncomingBullet(byte playerId, int bulletId, byte bulletType)
@@ -576,19 +475,14 @@ class Server
 
     private static void generateInitData()
     {
+        dangerZone = new DangerZone();
+
         InitRandomGuns getItems = new InitRandomGuns(R.Net.MAX_PLAYERS);
         itemData = getItems.compressedpcktarray;
 
         while (!tc.GenerateEncoding()) ;
         int terrainDataLength = tc.CompressedData.Length;
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
-
-        dangerZoneX = (float)((random.NextDouble() * R.Game.Terrain.DEFAULT_WIDTH) - (R.Game.Terrain.DEFAULT_WIDTH / 2));
-        dangerZoneZ = (float)((random.NextDouble() * R.Game.Terrain.DEFAULT_LENGTH) - (R.Game.Terrain.DEFAULT_LENGTH / 2));
-
-        dangerZoneRadius = Convert.ToSingle(Math.Sqrt(Math.Pow(R.Game.DangerZone.ZONE_CENTER_POOL_WIDTH, 2) + Math.Pow(R.Game.DangerZone.ZONE_CENTER_POOL_HEIGHT, 2))
-        + Math.Sqrt(Math.Pow((R.Game.Terrain.DEFAULT_WIDTH - R.Game.DangerZone.ZONE_CENTER_POOL_WIDTH) / 2, 2) + Math.Pow((R.Game.Terrain.DEFAULT_LENGTH - R.Game.DangerZone.ZONE_CENTER_POOL_HEIGHT) / 2, 2)));
-        fullRad = dangerZoneRadius;
     }
 
     private static void listenThreadFunc()
@@ -626,7 +520,7 @@ class Server
             transmitThreadArr[i] = new Thread(transmitThreadFunc);
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
-        
+
         foreach (Thread t in transmitThreadArr)
         {
             if (t != null)
