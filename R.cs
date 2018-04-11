@@ -7,7 +7,7 @@ namespace R
     {
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
-	    public const ushort MAX_PLAYERS = 30;
+	      public const ushort MAX_PLAYERS = 30;
         public const ushort TIMEOUT = 30;
 
         // Contains constants associated with the header type of the packet
@@ -82,6 +82,10 @@ namespace R
     // Contains Constants Related to the game
     public static class Game
     {
+        public const int TICK_RATE = 64;
+        public const double TICK_INTERVAL = (double)1000 / (double)TICK_RATE;
+        public const float GAME_TIMER_INIT = 900000f;
+
         // Terrain Constants
         public static class Terrain
         {
@@ -121,6 +125,24 @@ namespace R
             public const byte ADD = 1;
             public const byte REMOVE = 0;
             public const byte IGNORE = 255;
+        }
+
+        // Danger zone constant
+        public static class DangerZone
+        {
+            public const float ZONE_CENTER_POOL_WIDTH = R.Game.Terrain.DEFAULT_WIDTH - 250;
+            public const float ZONE_CENTER_POOL_HEIGHT = R.Game.Terrain.DEFAULT_LENGTH - 250;
+            public const float RAD_RATE_PHASE1 = 0.2f; // ratio of radius to reduce per time unit -- phase 1
+            public const float RAD_RATE_PHASE2 = 0.3f; // ratio of radius to reduce per time unit -- phase 1
+            public const float RAD_RATE_PHASE3 = 0.5f; // ratio of radius to reduce per time unit -- phase 1
+            public const float TIME_UNIT_TO_SHRINK = 180000f; // milliseconds. time  to shrink zone
+            public const float TIME_UNIT_TO_PAUSE = 120000f; // milliseconds. time amount to pause shrinking
+            public const float GAME_TIMER_PHASE1_START = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE;
+            public const float GAME_TIMER_PHASE1_END = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE - R.Game.DangerZone.TIME_UNIT_TO_SHRINK;
+            public const float GAME_TIMER_PHASE2_START = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE * 2 - R.Game.DangerZone.TIME_UNIT_TO_SHRINK;
+            public const float GAME_TIMER_PHASE2_END = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE * 2 - R.Game.DangerZone.TIME_UNIT_TO_SHRINK * 2;
+            public const float GAME_TIMER_PHASE3_START = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE * 3 - R.Game.DangerZone.TIME_UNIT_TO_SHRINK * 2;
+            public const float GAME_TIMER_PHASE3_END = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE * 3- R.Game.DangerZone.TIME_UNIT_TO_SHRINK * 3;
         }
 
     }

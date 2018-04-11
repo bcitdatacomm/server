@@ -7,7 +7,6 @@ using InitGuns;
 
 class Server
 {
-    private const double tickInterval = (double)1000 / (double)64;
     private static DateTime nextTick = DateTime.Now;
     private static Thread sendThread;
     private static Thread recvThread;
@@ -18,6 +17,9 @@ class Server
     private static Networking.Server server;
 
     private static byte[] sendBuffer = new byte[R.Net.Size.SERVER_TICK];
+
+    private static bool overtime = false;
+    private static Random random = new Random();
 
     private static byte nextPlayerId = 1;
     private static Dictionary<byte, Player> players;
@@ -36,6 +38,7 @@ class Server
     private static bool accepting = false;
     private static TCPServer tcpServer;
 
+    private static DangerZone dangerZone;
     private static SpawnPointGenerator spawnPointGenerator = new SpawnPointGenerator();
 
     public static void Main()
@@ -76,7 +79,7 @@ class Server
     {
         if (DateTime.Now > nextTick)
         {
-            nextTick = DateTime.Now.AddMilliseconds(tickInterval);
+            nextTick = DateTime.Now.AddMilliseconds(R.Game.TICK_INTERVAL);
             return true;
         }
         return false;
@@ -90,6 +93,8 @@ class Server
             {
                 if (isTick())
                 {
+                    dangerZone.Update();
+
                     Dictionary<int, int> bulletIds = new Dictionary<int, int>();
 
                     mutex.WaitOne();
@@ -99,6 +104,13 @@ class Server
                         {
                             bulletIds[bullet.Key] = bullet.Key;
                         }
+                    }
+                    mutex.ReleaseMutex();
+
+                    mutex.WaitOne();
+                    foreach (KeyValuePair<byte, Player> player in players)
+                    {
+                        dangerZone.HandlePlayer(player.Value);
                     }
                     mutex.ReleaseMutex();
 
@@ -123,7 +135,7 @@ class Server
                                 }
                                 else
                                 {
-                                    player.Value.h -= bullet.Value.Damage;
+                                    player.Value.TakeDamage(bullet.Value.Damage);
                                 }
                                 // Signal delete
                                 bulletIds[bullet.Key] = bullet.Key;
@@ -177,13 +189,11 @@ class Server
                     byte[] snapshot = new byte[sendBuffer.Length];
                     Buffer.BlockCopy(sendBuffer, 0, snapshot, 0, sendBuffer.Length);
 
-                    mutex.WaitOne();
                     foreach (KeyValuePair<byte, Player> pair in players)
                     {
-                        snapshot[R.Net.Offset.HEALTH] = pair.Value.h;
+                        updateHealthPacket(pair.Value, snapshot);
                         server.Send(pair.Value.ep, snapshot, snapshot.Length);
                     }
-                    mutex.ReleaseMutex();
                 }
             }
             catch (Exception e)
@@ -218,6 +228,13 @@ class Server
         return tmp;
     }
 
+    private static void updateHealthPacket(Player player, byte[] snapshot)
+    {
+        int offset = R.Net.Offset.HEALTH;
+        mutex.WaitOne();
+        Array.Copy(BitConverter.GetBytes(player.h), 0, snapshot, offset, 1);
+        mutex.ReleaseMutex();
+    }
 
     private static void buildSendPacket()
     {
@@ -227,8 +244,10 @@ class Server
 
         // Header
         mutex.WaitOne();
-
         sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count);
+
+        // Danger zone
+        Array.Copy(dangerZone.ToBytes(), 0, sendBuffer, R.Net.Offset.DANGER_ZONE, 16);
 
         // Player data
         foreach (KeyValuePair<byte, Player> pair in players)
@@ -291,7 +310,6 @@ class Server
             }
             mutex.ReleaseMutex();
         }
-
     }
 
     private static void recvThreadFunction()
@@ -457,6 +475,8 @@ class Server
 
     private static void generateInitData()
     {
+        dangerZone = new DangerZone();
+
         InitRandomGuns getItems = new InitRandomGuns(R.Net.MAX_PLAYERS);
         itemData = getItems.compressedpcktarray;
 
@@ -500,7 +520,7 @@ class Server
             transmitThreadArr[i] = new Thread(transmitThreadFunc);
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
-        
+
         foreach (Thread t in transmitThreadArr)
         {
             if (t != null)

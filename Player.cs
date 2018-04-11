@@ -25,4 +25,18 @@ public class Player
 		this.currentWeaponId = 0;
 		this.currentWeaponType = 0;
 	}
+
+	public void TakeDamage(byte damage)
+	{
+		if (this.h < damage)
+		{
+			this.h = 0;
+			this.x = 1000;
+			this.z = 1000;
+		}
+		else
+		{
+			this.h -= damage;
+		}
+	}
 }
