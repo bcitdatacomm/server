@@ -134,7 +134,7 @@ namespace R
 
     public static class Init
     {
-        public const int PLAYERMULT = 2;
+        public const int PLAYERMULT = 8;
         public const int WEAPONOFFSETID = 1;
         public const int WEAPONOFFSETX = 5;
         public const int WEAPONOFFSETZ = 9;
