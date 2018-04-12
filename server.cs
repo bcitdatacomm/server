@@ -96,7 +96,6 @@ class Server
                     dangerZone.Update();
 
                     Dictionary<int, int> bulletIds = new Dictionary<int, int>();
-                    Dictionary<byte, byte> deadPlayers = new Dictionary<byte, byte>();
 
                     mutex.WaitOne();
                     foreach (KeyValuePair<int, Bullet> bullet in bullets)
@@ -154,22 +153,6 @@ class Server
                             // Remove expired bullets
                             bulletIds[pair.Key] = pair.Key;
                         }
-                    }
-                    mutex.ReleaseMutex();
-
-                    // Remove dead players from array
-                    mutex.WaitOne();
-                    foreach (KeyValuePair<byte, Player> player in players)
-                    {
-                        if (player.Value.IsDead())
-                        {
-                            deadPlayers[player.Key] = player.Key;
-                        }
-                    }
-
-                    foreach (KeyValuePair<byte, byte> deadPlayer in deadPlayers)
-                    {
-                        players.Remove(deadPlayer.Key);
                     }
                     mutex.ReleaseMutex();
 
