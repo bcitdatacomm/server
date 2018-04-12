@@ -491,19 +491,23 @@ class Server
         accepting = true;
 		Networking.EndPoint ep = new Networking.EndPoint();
 
+        // Accept loop, accepts incoming client requests if there are <30 clients or loop is broken
         while (accepting && numClients < R.Net.MAX_PLAYERS)
         {
 			clientsockfd = tcpServer.AcceptConnection(ref ep);
 
+            // Breaks loop only if there are >1 clients and AcceptConnection call times out
             if (clientsockfd == R.Net.TIMEOUT_ERRNO && numClients > 1)
             {
                 LogError("Accept timeout: Breaking out of listen loop");
                 accepting = false;
             }
+            // If AcceptConnection call returns an error
             if (clientsockfd <= 0)
             {
                 LogError("Accept error: " + clientsockfd);
             }
+            // AcceptConnection call passes
             else
             {
                 clientSockFdArr[numClients] = clientsockfd;
@@ -512,6 +516,7 @@ class Server
             }
         }
 
+        // Generate game initialization data - weapon spawns & map data
         generateInitData();
 
         // Intialize and start transmit threads
@@ -521,6 +526,7 @@ class Server
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
 
+        // Join each transmitThread 
         foreach (Thread t in transmitThreadArr)
         {
             if (t != null)
@@ -538,10 +544,15 @@ class Server
         Int32 numSentItem;
         Int32 sockfd = (Int32)clientsockfd;
 
+        // Send item spawn data to the client
         numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Item Bytes Sent: " + numSentItem);
+
+        // Send map data to the client
         numSentMap = tcpServer.Send(sockfd, mapData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Map Bytes Sent: " + numSentMap);
+
+        // Close client TCP socket
         tcpServer.CloseClientSocket(sockfd);
     }
 
