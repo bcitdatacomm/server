@@ -31,12 +31,15 @@ public class Player
 		if (this.h < damage)
 		{
 			this.h = 0;
-			this.x = 1000;
-			this.z = 1000;
 		}
 		else
 		{
 			this.h -= damage;
 		}
+	}
+
+	public bool IsDead()
+	{
+		return this.h == 0;
 	}
 }
