@@ -395,7 +395,7 @@ class Server
         handleIncomingBullet(id, bulletId, bulletType);
 
         mutex.WaitOne();
-        players[id].x = x;
+        players[id].x = x; //crashing here
         players[id].z = z;
         players[id].r = r;
         mutex.ReleaseMutex();
@@ -495,7 +495,7 @@ class Server
         {
 			clientsockfd = tcpServer.AcceptConnection(ref ep);
 
-            if (clientsockfd == -11)
+            if (clientsockfd == R.Net.TIMEOUT_ERRNO && numClients > 1)
             {
                 LogError("Accept timeout: Breaking out of listen loop");
                 accepting = false;
@@ -537,7 +537,6 @@ class Server
         Int32 numSentMap;
         Int32 numSentItem;
         Int32 sockfd = (Int32)clientsockfd;
-        byte[] obstacleDataBuffer = new byte[R.Net.TCP_BUFFER_SIZE];
 
         numSentItem = tcpServer.Send(sockfd, itemData, R.Net.TCP_BUFFER_SIZE);
         LogError("Num Item Bytes Sent: " + numSentItem);
