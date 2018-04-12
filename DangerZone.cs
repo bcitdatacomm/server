@@ -1,10 +1,14 @@
 /*----------------------------------------------------------------------
--- SOURCE FILE:	DangerZone.cs	    -
+-- SOURCE FILE:	DangerZone.cs	    - A file containing a class definition
+--                                    and functions of the DangerZone class
 --
 -- PROGRAM:		Server.exe
 --
 -- FUNCTIONS:
---
+--              public DangerZone(void)
+--              public void Update(void)
+--              public void HandlePlayer(Player player)
+--              public byte[] ToBytes(void)
 --
 -- DATE:		April 11, 2018
 --
@@ -13,7 +17,13 @@
 -- PROGRAMMER:	Jeremy Lee
 --
 -- NOTES:
---
+-- A class definition to control danger zone in the game.
+-- A "danger zone" is where a player character continuously loses its
+-- health. A circular zone is initially created by a randomly set center
+-- point on the map to define a safe zone, and it shrinks throughout
+-- 3 phases which are separated by "safe time". The safe zone doesn't
+-- shrink this "safe time".
+-- At the end of the game, the safe zone shrinks to its minimum size, 0.
 ----------------------------------------------------------------------*/
 using System;
 
@@ -62,6 +72,10 @@ public class DangerZone
 	-- RETURNS:	    void
 	--
 	-- NOTES:
+    -- The class constructor of the DangerZone class.
+    -- Randomizes the initial coordinate of the center of the safe zone
+    -- within a smaller area of the map. Gets the radius of the safe
+    -- zone by the length of the diagnal of the smaller are of the map.
 	------------------------------------------------------------------*/
     public DangerZone()
     {
@@ -92,6 +106,13 @@ public class DangerZone
     -- RETURNS:	    void
     --
     -- NOTES:
+    -- Updates the radius and the center coordinate of the safe zone.
+    -- There are 3 phases, 3 pause-periods. When in one of the phases,
+    -- the radius is decreased every seconds and the center gradually
+    -- moves to the new center. When in a pause-priod, the radius and
+    -- the center is fixed. Each phase has different randomized center
+    -- coordinates and radius-decrease ratioes. If the game time hits 0,
+    -- the radius is fixed to 0 and the center is not moved.
     ------------------------------------------------------------------*/
     public void Update()
     {
@@ -169,11 +190,17 @@ public class DangerZone
     --
     -- INTERFACE:	public void HandlePlayer(Player player)
     --
-    -- ARGUMENT:    player
+    -- ARGUMENT:    player                      - The player to check the
+    --                                            coordinate of and
+    --                                            handle health of.
     --
     -- RETURNS:	    void
     --
     -- NOTES:
+    -- Updates the given user's health.
+    -- Gets the given user's coordinate and checks if the user is outside
+    -- of the safe zone. If the user is outside of the safe zone, then
+    -- the user's health decreases by 1 every seconde.
     ------------------------------------------------------------------*/
     public void HandlePlayer(Player player)
     {
@@ -203,9 +230,13 @@ public class DangerZone
     --
     -- ARGUMENT:    void
     --
-    -- RETURNS:	    byte[]
+    -- RETURNS:	    byte[]                  - Danger zone data including
+    --                                        safe zone's center
+    --                                        coordinate and the radius
+    --                                        of the safe zone area.
     --
     -- NOTES:
+    -- Converts the danger zone data into a byte array and returns it.
     ------------------------------------------------------------------*/
     public byte[] ToBytes()
     {
