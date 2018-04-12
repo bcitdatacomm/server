@@ -212,7 +212,7 @@ public class DangerZone
         {
             if (distance >= dangerZoneRadius)
             {
-                player.TakeDamage(1);
+                player.TakeDamage(R.Game.DangerZone.ZONE_DAMAGE_PER_SEC);
             }
         }
     }

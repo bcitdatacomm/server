@@ -31,6 +31,8 @@ public class Player
 		if (this.h < damage)
 		{
 			this.h = 0;
+			this.x = 1000 + this.id;
+			this.z = 1000;
 		}
 		else
 		{

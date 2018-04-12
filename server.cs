@@ -23,6 +23,7 @@ class Server
 
     private static byte nextPlayerId = 1;
     private static Dictionary<byte, Player> players;
+    private static HashSet<byte> deadPlayers = new HashSet<byte>();
     private static Stack<Bullet> newBullets = new Stack<Bullet>();
     private static Dictionary<int, Bullet> bullets = new Dictionary<int, Bullet>();
     private static Stack<Tuple<byte, int>> weaponSwapEvents = new Stack<Tuple<byte, int>>();
@@ -244,7 +245,8 @@ class Server
 
         // Header
         mutex.WaitOne();
-        sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count);
+
+        sendBuffer[0] = generateTickPacketHeader(true, newBullets.Count > 0, weaponSwapEvents.Count > 0, players.Count - deadPlayers.Count);
 
         // Danger zone
         Array.Copy(dangerZone.ToBytes(), 0, sendBuffer, R.Net.Offset.DANGER_ZONE, 16);
@@ -395,9 +397,16 @@ class Server
         handleIncomingBullet(id, bulletId, bulletType);
 
         mutex.WaitOne();
-        players[id].x = x; //crashing here
-        players[id].z = z;
-        players[id].r = r;
+        if (players[id].IsDead())
+        {
+            deadPlayers.Add(id);
+        }
+        else
+        {
+            players[id].x = x; //crashing here
+            players[id].z = z;
+            players[id].r = r;
+        }
         mutex.ReleaseMutex();
     }
 
@@ -526,7 +535,7 @@ class Server
             transmitThreadArr[i].Start(clientSockFdArr[i]);
         }
 
-        // Join each transmitThread 
+        // Join each transmitThread
         foreach (Thread t in transmitThreadArr)
         {
             if (t != null)

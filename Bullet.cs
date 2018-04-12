@@ -37,7 +37,7 @@ public class Bullet
                 this.Damage = 70;
                 this.Size = 0.5f;
                 this.speed = 0.4f;
-                this.deathTime = currentTime.AddSeconds(0.01);
+                this.deathTime = currentTime.AddSeconds(0.03);
                 break;
             case R.Type.PISTOL:
                 this.Damage = 10;
@@ -88,7 +88,7 @@ public class Bullet
 
     public bool isColliding(float x, float z, float r)
     {
-        
+
         double distance = Math.Sqrt((this.X - x) * (this.X - x) + (this.Z - z) * (this.Z - z));
         double radiusSum = this.Size + r;
         // Console.WriteLine("X: {0}, Z: {1}, Size: {2}", this.X, this.Z, this.Size);
