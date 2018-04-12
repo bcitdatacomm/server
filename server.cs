@@ -401,12 +401,11 @@ class Server
         {
             deadPlayers.Add(id);
         }
-        else
-        {
-            players[id].x = x; //crashing here
-            players[id].z = z;
-            players[id].r = r;
-        }
+
+        players[id].x = x; //crashing here
+        players[id].z = z;
+        players[id].r = r;
+
         mutex.ReleaseMutex();
     }
 

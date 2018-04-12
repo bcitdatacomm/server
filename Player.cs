@@ -42,6 +42,13 @@ public class Player
 
 	public bool IsDead()
 	{
-		return this.h == 0;
+		if (this.h == 0)
+		{
+			this.x = 1000 + this.id;
+			this.z = 1000;
+			return true;
+		}
+
+		return false;
 	}
 }
