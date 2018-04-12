@@ -19,8 +19,8 @@
 --	PROGRAMMER:		Delan Elliot
 --
 --	NOTES:
---		EndPoint and CAddr are C# structs that are explicitly packed in oder to preserve a
---      predicatble byte order. This way we can populate the binary data in C++ and still 
+--		EndPoint and CAddr are C# structs that are explicitly packed in order to preserve a
+--      predictable byte order. This way we can populate the binary data in C++ and still 
 --      be able to read the data in C#. It also provides a number of convenience methods 
 --      for comparison and stringificaion. 
 ---------------------------------------------------------------------------------------*/
@@ -29,7 +29,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 
-namespace Client
+namespace Networking
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct CAddr{
