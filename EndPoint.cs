@@ -1,4 +1,31 @@
-﻿using System;
+﻿/*---------------------------------------------------------------------------------------
+--	SOURCE FILE:	EndPoint.cs -   A C# struct for C++/C# interoperability
+--
+--	PROGRAM:		game
+--
+--	CLASSES:        EndPoint
+--                  CAddr
+--                  EndpointComparer
+--
+--	DATE:			February 25th, 2018
+--
+--	REVISIONS:		March 15th, 2018:
+--                      Added convenience methods for comparison (Delan Elliot)
+--                  April 11th, 2018:
+--                      Fixed compile warning
+--
+--	DESIGNERS:		Delan Elliot
+--
+--	PROGRAMMER:		Delan Elliot
+--
+--	NOTES:
+--		EndPoint and CAddr are C# structs that are explicitly packed in order to preserve a
+--      predictable byte order. This way we can populate the binary data in C++ and still 
+--      be able to read the data in C#. It also provides a number of convenience methods 
+--      for comparison and stringificaion. 
+---------------------------------------------------------------------------------------*/
+
+using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 
@@ -66,6 +93,19 @@ namespace Networking
         {
             return Compare(x, y) == 0;
         }
+
+        public override bool Equals (object x)
+        {
+            if(x is EndPoint)
+            {
+                return Compare(this, (EndPoint) x) == 0;            
+            }
+            else
+            {
+                return false;
+            }
+        }
+        
 
         public static bool operator != (EndPoint x, EndPoint y)
         {
