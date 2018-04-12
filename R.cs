@@ -8,7 +8,7 @@ namespace R
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
 	    public const ushort MAX_PLAYERS = 30;
-        public const ushort TIMEOUT = 30;
+        public const ushort TIMEOUT = 10;
         public const short TIMEOUT_ERRNO = -11;
 
         // Contains constants associated with the header type of the packet
