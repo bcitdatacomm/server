@@ -446,6 +446,26 @@ class Server
         server.Send(newPlayer.ep, buffer, buffer.Length);
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:    initTCPServer
+    --
+    -- DATE:        Mar. 28, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:    Benny Wang
+    --
+    -- PROGRAMMER:  Benny Wang
+    --
+    -- INTERFACE:   private static void initTCPServer()
+    --
+    -- RETURNS:     void
+    --
+    -- NOTES: 
+    -- This function is called to initialize a TCPServer object which handles TCP connections.
+    -- After creating the TCPServer object, it creates a thread which executes listenThreadFunc
+    -- and joins on the thread's termination.
+    -------------------------------------------------------------------------------------------------*/
     private static void initTCPServer()
     {
         tcpServer = new TCPServer();
@@ -465,6 +485,35 @@ class Server
         Array.Copy(tc.CompressedData, 0, mapData, 0, terrainDataLength);
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:    listenThreadFunc
+    --
+    -- DATE:        Mar. 28, 2018
+    --              
+    -- REVISIONS:   Apr. 9, 2018
+    --                  - Added timeout to listen loop, hard coded to 30s
+    --              Apr. 11, 2018
+    --                  - Modified timeout to accept a value passed down from
+    --                    R.Net.TIMEOUT
+    --
+    -- DESIGNER:    Wilson Hu, Angus Lam, Benny Wang
+    --
+    -- PROGRAMMER:  Wilson Hu, Angus Lam, Benny Wang
+    --
+    -- INTERFACE:   private static void listenThreadFunc()
+    --
+    -- RETURNS:     void
+    --
+    -- NOTES: 
+    -- This thread function performs a listen loop that continuously accepts up to 
+    -- 30 clients. 
+    -- 
+    -- It calls the game generation function upon timing out or receiving the max
+    -- number of clients. 
+    -- 
+    -- It then creates n threads to handle transmitting game initialization data to each
+    -- connected client, and joining on each thread's termination.
+    -------------------------------------------------------------------------------------------------*/
     private static void listenThreadFunc()
     {
         Int32 clientsockfd;
@@ -512,6 +561,26 @@ class Server
         LogError("All threads joined, Starting game");
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:    transmitThreadFunc
+    --
+    -- DATE:        Mar. 28, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:    Wilson Hu, Angus Lam, Benny Wang
+    --
+    -- PROGRAMMER:  Angus Lam, Wilson Hu, Benny Wang
+    --
+    -- INTERFACE:   private static void transmitThreadFunc(object clientsockfd)
+    --                  object clientsockfd: a socket descriptor value which is cast to an Int32
+                                             within the function
+    --
+    -- RETURNS:     void
+    --
+    -- NOTES: 
+    -- This thread function sends the game initialization data to its input client socket descriptor.
+    -------------------------------------------------------------------------------------------------*/
     private static void transmitThreadFunc(object clientsockfd)
     {
         Int32 numSentMap;
@@ -525,6 +594,7 @@ class Server
         LogError("Num Map Bytes Sent: " + numSentMap);
         tcpServer.CloseClientSocket(sockfd);
     }
+
 
     private static void LogError(String s)
     {
