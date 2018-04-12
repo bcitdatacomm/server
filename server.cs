@@ -447,9 +447,9 @@ class Server
     private static void addNewPlayer(EndPoint ep)
     {
         List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
+        Player newPlayer = new Player(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
 
         mutex.WaitOne();
-        Player newPlayer = new Player(ep, nextPlayerId, spawnPoint[0], spawnPoint[1]);
         nextPlayerId++;
         players[newPlayer.id] = newPlayer;
         mutex.ReleaseMutex();

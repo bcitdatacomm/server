@@ -8,7 +8,7 @@ namespace R
         public const ushort PORT = 42069;
         public const Int32 TCP_BUFFER_SIZE = 8192;
 	    public const ushort MAX_PLAYERS = 30;
-        public const ushort TIMEOUT = 10;
+        public const ushort TIMEOUT = 30;
         public const short TIMEOUT_ERRNO = -11;
 
         // Contains constants associated with the header type of the packet
@@ -85,7 +85,7 @@ namespace R
     {
         public const int TICK_RATE = 64;
         public const double TICK_INTERVAL = (double)1000 / (double)TICK_RATE;
-        public const float GAME_TIMER_INIT = 900000f;
+        public const float GAME_TIMER_INIT = 900000f; // 15 mins
 
         // Terrain Constants
         public static class Terrain
@@ -134,9 +134,9 @@ namespace R
             public const float ZONE_CENTER_POOL_WIDTH = R.Game.Terrain.DEFAULT_WIDTH - 250;
             public const float ZONE_CENTER_POOL_HEIGHT = R.Game.Terrain.DEFAULT_LENGTH - 250;
             public const byte ZONE_DAMAGE_PER_SEC = 5;
-            public const float RAD_RATE_PHASE1 = 0.2f; // ratio of radius to reduce per time unit -- phase 1
-            public const float RAD_RATE_PHASE2 = 0.3f; // ratio of radius to reduce per time unit -- phase 1
-            public const float RAD_RATE_PHASE3 = 0.5f; // ratio of radius to reduce per time unit -- phase 1
+            public const float RAD_RATE_PHASE1 = 0.5f; // ratio of radius to reduce per time unit -- phase 1
+            public const float RAD_RATE_PHASE2 = 0.2f; // ratio of radius to reduce per time unit -- phase 1
+            public const float RAD_RATE_PHASE3 = 0.3f; // ratio of radius to reduce per time unit -- phase 1
             public const float TIME_UNIT_TO_SHRINK = 120000f; // milliseconds. time  to shrink zone
             public const float TIME_UNIT_TO_PAUSE = 60000f; // milliseconds. time amount to pause shrinking
             public const float GAME_TIMER_PHASE1_START = R.Game.GAME_TIMER_INIT - R.Game.DangerZone.TIME_UNIT_TO_PAUSE;

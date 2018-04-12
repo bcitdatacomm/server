@@ -94,7 +94,7 @@ class SpawnPointGenerator
     {
         List<float> point = new List<float>();
 
-        for (int i = 0; i < rng.Next(0, 40); i++)
+        for (int i = 0; i < rng.Next(0, 39); i++)
         {
             if (this.spawnPoints.Count == 0)
             {
