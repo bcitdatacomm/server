@@ -17,5 +17,3 @@ mkbundle -o server server.exe --deps -L /usr/lib/mono/4.5/
 
 mv ./server ./dist/
 echo "----Finished making Game Server----"
-
-
