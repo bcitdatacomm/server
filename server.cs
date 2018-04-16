@@ -1,4 +1,48 @@
-﻿using System;
+﻿/*---------------------------------------------------------------------------------------
+--    SOURCE FILE:    Server.cs
+--
+--    PROGRAM:        server
+--
+--    FUNCTIONS:        
+--                    public static void Main()
+--                    public static void pregame()
+--                    public static void startGame()
+--                    private static bool isTick()
+--                    private static void gameThreadFunction()
+--                    private static void sendThreadFunction()
+--                    private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
+--                    private static void updateHealthPacket(Player player, byte[] snapshot)
+--                    private static void buildSendPacket()
+--                    private static void recvThreadFunction()
+--                    private static void handleBuffer(byte[] inBuffer, EndPoint ep)
+--                    private static void updateExistingPlayer(ref byte[] inBuffer)
+--                    private static void handleIncomingBullet(byte playerId, int bulletId, byte bulletType)
+--                    private static void handleIncomingWeapon(byte playerId, int weaponId, byte weaponType)
+--                    private static void addNewPlayer(EndPoint ep)
+--                    private static void sendInitPacket(Player newPlayer)
+--                    private static void initTCPServer()
+--                    private static void generateInitData()
+--                    private static void listenThreadFunc()
+--                    private static void transmitThreadFunc(object clientsockfd)
+--
+--    DATE:           Feb 18, 2018
+--
+--    REVISIONS:      Mar 18, 2018 - Created separate repo for server
+--                    Mar 30, 2018 - Moved the server off unity to a seperate script
+--                    Apr 2, 2018 - Added bullet handling
+--                    Apr 11, 2018 - Merged in danger zone
+--
+--    DESIGNERS:      Benny Wang, Tim Bruecker, Haley Booker, Alfred Swinton
+--
+--    PROGRAMMER:     Benny Wang, Tim Bruecker, Haley Booker, Alfred Swinton
+--
+-- NOTES:
+-- This is the csharp class to start the server. It waits for a maximum of 30 players.
+-- After 30 seconds of running the game will be initiated if a minimum of 2 players have joined.
+-- The server keeps track of all players, bullets and weapons in the game. It sends the
+-- information of the players inventory, health and the other players coordinates to each player.
+---------------------------------------------------------------------------------------*/
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -42,6 +86,24 @@ class Server
     private static DangerZone dangerZone;
     private static SpawnPointGenerator spawnPointGenerator = new SpawnPointGenerator();
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         Main()
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang
+    --
+    -- INTERFACE:        public static void Main()
+    --
+    -- RETURNS:          void
+    --
+    -- NOTES:
+    -- The starting point of the server. Sets up the pregame and starts the game.
+    -------------------------------------------------------------------------------------------------*/
     public static void Main()
     {
         Console.WriteLine("Starting server");
@@ -52,12 +114,48 @@ class Server
         startGame();
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         pregame
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang
+    --
+    -- INTERFACE:        public static void pregame()
+    --
+    -- RETURNS:          void
+    --
+    -- NOTES:
+    -- Creates everything needed before the game can start.
+    -------------------------------------------------------------------------------------------------*/
     public static void pregame()
     {
         players = new Dictionary<byte, Player>();
         initTCPServer();
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         startGame
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang, Haley Booker
+    --
+    -- INTERFACE:        public static void startGame()
+    --
+    -- RETURNS:         void
+    --
+    -- NOTES:
+    -- Starts the threads for the game.
+    -------------------------------------------------------------------------------------------------*/
     public static void startGame()
     {
         server = new Networking.Server();
@@ -75,6 +173,24 @@ class Server
         gameThread.Start();
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         isTick
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang
+    --
+    -- INTERFACE:        public static void isTick()
+    --
+    -- RETURNS:          Returns true if time has elapsed. Else it returns false
+    --
+    -- NOTES:
+    -- Checks if a new tick has occurred. It’s used to update the send thread.
+    -------------------------------------------------------------------------------------------------*/
     private static bool isTick()
     {
         if (DateTime.Now > nextTick)
@@ -85,6 +201,25 @@ class Server
         return false;
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         gameThreadFunction
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- INTERFACE:        private static void gameThreadFunction()
+    --
+    -- RETURNS:          void
+    --
+    -- NOTES:
+    -- Updates the the players based on collisions and the danger zone. The systems handles
+    -- players outside the danger zone, collisions between bullets and players and expired bullets.
+    -------------------------------------------------------------------------------------------------*/
     private static void gameThreadFunction()
     {
         try
@@ -175,6 +310,25 @@ class Server
         }
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         sendThreadFunction
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- INTERFACE:        private static void sendThreadFunction()
+    --
+    -- RETURNS:          void
+    --
+    -- NOTES:
+    -- Sends and packet to each connected player. The system sends each players
+    -- health out after updating it.
+    -------------------------------------------------------------------------------------------------*/
     private static void sendThreadFunction()
     {
         Console.WriteLine("Starting Sending Thread");
@@ -204,6 +358,31 @@ class Server
         }
     }
 
+
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION:         generateTickPacketHeader
+    --
+    -- DATE:             Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER:         Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER:       Benny Wang
+    --
+    -- INTERFACE:        private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
+    --                      bool hasPlayer: True if the packet is sending players
+    --                      bool hasBullet: True if the packet is sending bullets
+    --                      bool hasWeapon: True if the packet is sending weapons
+    --                      int players: The number of players in the game
+    --
+    -- RETURNS:          The header byte generated
+    --
+    -- NOTES:
+    -- Generates a byte for the header based on what it needs to send. The byte value will      
+    -- depend on the number of players and whether the packet will have players, bullets and/or
+    -- weapons.
+    -------------------------------------------------------------------------------------------------*/
     private static byte generateTickPacketHeader(bool hasPlayer, bool hasBullet, bool hasWeapon, int players)
     {
         byte tmp = 0;
@@ -228,6 +407,27 @@ class Server
         return tmp;
     }
 
+
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		updateHealthPacket
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker
+    --
+    -- PROGRAMMER: 	    Benny Wang, Tim Bruecker
+    --
+    -- INTERFACE:	 	private static void updateHealthPacket(Player player, byte[] snapshot)
+    --				        Player player: The player object
+    --				        byte[] snapshot: The byte array to be copied to
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Takes a players health value and copies it into a byte array. Used to update player’s health
+    -------------------------------------------------------------------------------------------------*/
     private static void updateHealthPacket(Player player, byte[] snapshot)
     {
         int offset = R.Net.Offset.HEALTH;
@@ -236,6 +436,26 @@ class Server
         mutex.ReleaseMutex();
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		buildSendPacket
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:		Mar 27, 2018 - Refactored offsets for new packets
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER: 	    Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- INTERFACE:	 	private static void buildSendPacket()
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Builds the send packet with the players ids and coordinates. For any new bullets it adds
+    -- them to the packet.The offset of the bullets is based on which player fired the bullet. If a
+    -- player’s inventory has changed. The weapons on the map will be updated.
+    -------------------------------------------------------------------------------------------------*/
     private static void buildSendPacket()
     {
         int offset = R.Net.Offset.PLAYERS;
@@ -313,6 +533,26 @@ class Server
         }
     }
 
+
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		recvThreadFunction
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER: 	    Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- INTERFACE:	 	private static void recvThreadFunction()
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Receives all incoming data from all clients. Checks to confirm the amount of data
+    -- is accurate.
+    -------------------------------------------------------------------------------------------------*/
     private static void recvThreadFunction()
     {
         Console.WriteLine("Starting Receive Function");
@@ -361,6 +601,26 @@ class Server
         return;
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		handleBuffer
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker
+    --
+    -- PROGRAMMER: 	    Benny Wang
+    --
+    -- INTERFACE:	 	private static void handleBuffer(byte[] inBuffer, EndPoint ep)
+    --				        byte[] inBuffer: The buffer of recieved data
+    --				        EndPoint ep: The end point of who sent the data
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Checks to see if the data recieved is from a new or existing client.
+    -------------------------------------------------------------------------------------------------*/
     private static void handleBuffer(byte[] inBuffer, EndPoint ep)
     {
         switch (inBuffer[0])
@@ -380,6 +640,26 @@ class Server
         }
     }
 
+
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		updateExistingPlayer
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER: 	    Benny Wang, Haley Booker
+    --
+    -- INTERFACE:	 	private static void updateExistingPlayer(ref byte[] inBuffer)
+    --				        byte[] inBuffer: The buffer of recieved data
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Updates the coordinates of a player and handles bullets or weapons switching.
+    -------------------------------------------------------------------------------------------------*/
     private static void updateExistingPlayer(ref byte[] inBuffer)
     {
         byte id = inBuffer[R.Net.Offset.PID];
@@ -408,6 +688,27 @@ class Server
         mutex.ReleaseMutex();
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		handleIncomingBullet
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker
+    --
+    -- PROGRAMMER: 	    Benny Wang
+    --
+    -- INTERFACE:	 	private static void handleIncomingBullet(byte playerId, int bulletId, byte bulletType)
+    --				        byte playerId: The id of the player
+    --				        int bulletId: The id of the bullet
+    --				        byte bulletType: The type of bullet
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Creates a new bullet and adds it to the bullet array.
+    -------------------------------------------------------------------------------------------------*/
     private static void handleIncomingBullet(byte playerId, int bulletId, byte bulletType)
     {
         if (bulletType != 0)
@@ -422,6 +723,27 @@ class Server
         }
     }
 
+/*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		handleIncomingWeapon
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker
+    --
+    -- PROGRAMMER: 	    Benny Wang
+    --
+    -- INTERFACE:	 	private static void handleIncomingWeapon(byte playerId, int weaponId, byte weaponType)
+    --				        byte playerId: The id of the player
+    --				        int weaponId: The id of the weapon
+    --				        byte weaponType: The type of weapon
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Handles a player picking up a weapon and updating the player’s inventory.
+    -------------------------------------------------------------------------------------------------*/
     private static void handleIncomingWeapon(byte playerId, int weaponId, byte weaponType)
     {
         if (weaponId != 0)
@@ -443,6 +765,26 @@ class Server
         }
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		addNewPlayer
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:		Mar 27, 2018 - Refactored offsets for new packets
+    -- 				    Mar 30, 2018 - Implemented better spawn points
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER: 	    Benny Wang, Haley Booker
+    --
+    -- INTERFACE:	 	private static void addNewPlayer(EndPoint ep)
+    --				        EndPoint ep: The end point of a new connection
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Creates a new player and adds it to the player array.
+    -------------------------------------------------------------------------------------------------*/
     private static void addNewPlayer(EndPoint ep)
     {
         List<float> spawnPoint = spawnPointGenerator.GetNextSpawnPoint();
@@ -456,6 +798,27 @@ class Server
         sendInitPacket(newPlayer);
     }
 
+
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		sendInitPacket
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:		Mar 27, 2018 - Refactored offsets for new packets
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker, Haley Booker
+    --
+    -- PROGRAMMER: 	    Haley Booker
+    --
+    -- INTERFACE:	 	private static void sendInitPacket(Player newPlayer)
+    --				        Player newPlayer: The new player to be sent
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Sends an initial packet to client on connection. The packet contains the client’s
+    -- player id.
+    -------------------------------------------------------------------------------------------------*/
     private static void sendInitPacket(Player newPlayer)
     {
         byte[] buffer = new byte[R.Net.Size.SERVER_TICK];
@@ -500,6 +863,26 @@ class Server
         listenThread.Join();
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		generateInitData
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:		Mar 27, 2018 - Refactored offsets for new packets
+    --
+    -- DESIGNER: 		Benny Wang, Tim Bruecker
+    --
+    -- PROGRAMMER: 	    Benny Wang
+    --				    Roger Zhang
+    -- 				    Alfred Swinton
+    --
+    -- INTERFACE:	 	private static void generateInitData()
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- This function generates the valid initialization for the terrain and weapons.
+    -------------------------------------------------------------------------------------------------*/
     private static void generateInitData()
     {
         dangerZone = new DangerZone();
@@ -632,6 +1015,24 @@ class Server
         tcpServer.CloseClientSocket(sockfd);
     }
 
+    /*-------------------------------------------------------------------------------------------------
+    -- FUNCTION: 		LogError
+    --
+    -- DATE: 			Feb 18, 2018
+    --
+    -- REVISIONS:		
+    --
+    -- DESIGNER: 		Benny Wang
+    --
+    -- PROGRAMMER: 	    Benny Wang
+    --
+    -- INTERFACE:	 	private static void LogError()
+    --
+    -- RETURNS: 		void
+    --
+    -- NOTES:
+    -- Prints a message to the screen with the timestamp prepended to the message.
+    -------------------------------------------------------------------------------------------------*/
     private static void LogError(String s)
     {
         Console.WriteLine(DateTime.Now + " - " + s);
