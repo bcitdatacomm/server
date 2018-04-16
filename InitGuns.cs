@@ -1,4 +1,54 @@
-﻿using System;
+﻿/*------------------------------------------------------------------------------------------------------------------
+-- SOURCE FILE:  InitGuns.cs
+--
+-- PROGRAM: InitRandomGuns
+--
+-- FUNCTIONS:
+-- InitRandomGuns()
+-- InitRandomGuns(int NumPlayers)
+-- void printCoordinates()
+-- void printExpandedCoordinates()
+-- void fromByteArrayToList(byte[] transmittedBytes)
+-- void getByteArray()
+-- byte[] compressByteArray(byte[] data)
+-- WeaponSpell()
+-- WeaponSpell(int X,int Z)
+-- WeaponSpell(int X, int Z, bool flag)
+-- bool CoordinateMatch(WeaponSpell C) 
+-- void BasicString()
+-- string ExtendedString()
+-- byte GenGunType()
+-- bool OccupiedCheck(WeaponSpell genC, list<WeaponSpell> Occupied)
+-- byte[] PutWeaponIntoBytes(WeaponSpell Weapon)
+-- WeaponSpell GetWeaponFromBytes(byte[] weaponinbytes)
+-- int numberOfWeapons(int players)
+--
+-- DATE: April 11th 2018
+--
+-- REVISIONS: April 9 2018
+--		 April 5 2018
+--                      March 29 2018
+--                      March 26 2018
+--                      March 18 2018
+--		 March 17 2018
+--		 March 16 2018
+--		 March 15 2018
+--		 March  3  2018		 
+--
+-- DESIGNER: Alfred Swinton
+--
+-- PROGRAMMER: Alfred Swinton
+--
+-- NOTES:
+-- The above program is the logic that creates a random set of guns and spreads them randomly across 
+-- coordinates clustering them around areas of interest. These guns are put into a byte array that can be 
+-- sent across the network to individual clients to be placed on the map. This program also has the relevant 
+-- code to depack the byte array on the client side into a simple list to be used to populate the client map with 
+-- weapons.  
+----------------------------------------------------------------------------------------------------------------------*/
+
+
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Collections.Generic;
@@ -25,13 +75,42 @@ namespace InitGuns
         public byte[] pcktarray;
         public byte[] compressedpcktarray;
 
-
-        // Empty Initialization from pulling from byte array
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: InitRandomGuns()
+        --
+        -- DATE: April 11th 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: InitRandomGuns()	 	
+        --
+        -- NOTES:
+        -- Creates an empty InitRandomGuns object, can be used client side to fill up local list with data from packet
+        -- that has been converted with internal methods.
+        -------------------------------------------------------------------------------------------------*/
         public InitRandomGuns()
         {
         }
 
-        // Constructor takes the number of players
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: InitRandomGuns(int Numplayers)
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: InitRandomGuns(int Numplayers)	 	
+        --			Numplayers: the number of players in the game
+        --
+        -- NOTES:
+        -- Based on the number of players in the game this constructor builds up a number of random guns clustered 
+        -- around hotspots/ areas of interest and puts them into a public accessible local byte array that can be sent to -- the clients.
+        --
+        -------------------------------------------------------------------------------------------------*/
         public InitRandomGuns(int NumPlayers)
         {
 
@@ -119,7 +198,24 @@ namespace InitGuns
             getByteArray();
         }
 
-        // Basic Coordinates Printed
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: printCoordinates
+        --
+        -- DATE: April 11 2018
+
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: printCoordinates()	 	
+        --
+        -- RETURNS: 	void	
+        --
+        -- NOTES:
+        -- This function prints all the created weapon coordinates in the local list to the console, useful for debugging 
+        -- purposes.
+        -------------------------------------------------------------------------------------------------*/
         public void printCoordinates()
         {
             foreach (var w in SpawnedGuns)
@@ -128,7 +224,24 @@ namespace InitGuns
             }
         }
 
-        // Coordinates Printed with type and ID
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: printExpandedCoordinates
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: printExpandedCoordinates() 	
+        --
+        -- RETURNS: void
+        --
+        -- NOTES:
+        -- This prints all the created weapon coordinates, types and item ID’s to the console, useful for debugging 
+        -- purposes.
+        --
+        -------------------------------------------------------------------------------------------------*/
         public void printExpandedCoordinates()
         {
             foreach (var w in SpawnedGuns)
@@ -137,7 +250,25 @@ namespace InitGuns
             }
         }
 
-        // Take a byteArray and fill spawnedGuns list from bytearray
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: fromByteArrayToList
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: void fromByteArrayToList(byte[] transmittedBytes)
+        --	 		byte[] transmittedBytes : An array of weapon bytes, typically sent over the network
+        --
+        -- RETURNS: void		
+        --
+        -- NOTES:
+        -- This function takes a byte array of generated weapon coordinates (typically the byte array that has been 
+        -- sent over the network) and puts it into a publically accessible local list of weapons to be used by clients for 
+        -- putting weapons on the map.
+        -------------------------------------------------------------------------------------------------*/
         public void fromByteArrayToList(byte[] transmittedBytes)
         {
             int size = transmittedBytes.Length / R.Init.INDWPNPCKT;
@@ -154,7 +285,22 @@ namespace InitGuns
             }
         }
 
-        // Output the list of weapons as a bytearray
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: getByteArray
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: void getByteArray()	 	
+        --
+        -- RETURNS: void	
+        --
+        -- NOTES: 
+        -- Takes an List of Weapons and converts it to and places it in a publically available local byte array.
+        -------------------------------------------------------------------------------------------------*/
         public void getByteArray()
         {
             pcktarray = new byte[R.Init.INDWPNPCKT * SpawnedGuns.Count];
@@ -170,7 +316,24 @@ namespace InitGuns
             compressedpcktarray = compressByteArray(pcktarray);
         }
 
-        // Roger
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: compressByteArray
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Roger Zhang
+        --
+        -- PROGRAMMER: Roger Zhang
+        --
+        -- INTERFACE: byte[] compressByteArray(byte[] data) 	
+        --			byte[] data: a compressed version of a byte array 
+        --
+        -- RETURNS: byte[] data		
+        --
+        -- NOTES:
+        -- This function simply takes a byte array and compresses it so that less data needs to be sent across the 
+        -- network.
+        -------------------------------------------------------------------------------------------------*/
         public static byte[] compressByteArray(byte[] data)
         {
             using (var compressedStream = new MemoryStream())
@@ -190,19 +353,60 @@ namespace InitGuns
             public int ID { get; set; }
             public byte Type { get; set; }
 
-            // Empty Constructor
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: WeaponSpell()
+            --
+            -- DATE: April 11 2018
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: WeaponSpell()	 	
+            --
+            -- NOTES:
+            -- Empty Weapon Object Constructor.
+            -------------------------------------------------------------------------------------------------*/
             public WeaponSpell()
             {
             }
 
-            // Plain Coordinate Constructor
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: WeaponSpell(int X,int Z)
+            --
+            -- DATE: April 11 2018
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: WeaponSpell(int X,int Z)	 	
+            --
+            -- NOTES:
+            -- Constructor for an Individual Weapon Object without a type and ID used for normal coordinates rather than 
+            -- weapons themselves.
+            -------------------------------------------------------------------------------------------------*/
             public WeaponSpell(int X, int Z)
             {
                 this.X = X;
                 this.Z = Z;
             }
 
-            // Coordinate Constructor with Types
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: WeaponSpell(int X, int Z, bool flag)
+            --
+            -- DATE: April 11 2017
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: WeaponSpell(int X, int Z, bool flag)
+            --			int X: the X coordinate of the weapon, int Z: the Z coordinate of the weapon, bool flag: 	--                                   indicates that the weapon has a type and id 			
+            --
+            -- NOTES:
+            -- This is an individual weapon constructor with associated X and Z coordinates, it will also with the flag give it -- a randomly generated location and type and increment a variable to give it a unique weapon ID.
+            -------------------------------------------------------------------------------------------------*/
             public WeaponSpell(int X, int Z, bool flag)
             {
                 this.X = X;
@@ -212,7 +416,25 @@ namespace InitGuns
                 inc++;
             }
 
-            // Check if two sets of coordinates match
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: CoordinateMatch
+            --
+            -- DATE: April 11 2018
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: bool CoordinateMatch(WeaponSpell C) 	
+            --				
+            --
+            -- RETURNS: 	bool
+            --			true or false based on whether a set of weapons have matching 
+            --				coordinates
+            --
+            -- NOTES:
+            -- This function gets a boolean value based on whether or not to weapons have matching coordinates. This is necessary for checking whether there spaces are occupied.
+            -------------------------------------------------------------------------------------------------*/
             public bool CoordinateMatch(WeaponSpell C)
             {
                 if (this.X == C.X && this.Z == C.Z)
@@ -222,19 +444,68 @@ namespace InitGuns
                 return false;
             }
 
-            // Basic String output
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: BasicString()
+            --
+            -- DATE: April 11 2018
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: string BasicString() 	
+            --				
+            --
+            -- RETURNS: 	string
+            --			a basic string with the X and Z coordinates
+            --
+            -- NOTES:
+            -- This function prints out the basic X and Z coordinates useful for debugging purposes.
+            -------------------------------------------------------------------------------------------------*/
             public string BasicString()
             {
                 return "(" + X + "," + Z + ")";
             }
 
-            // Extended String output with weapon/spell type
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: ExtendedString
+            --
+            -- DATE: April 11 2018
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: string ExtendedString()	 	
+            --
+            -- RETURNS: string 		
+            --
+            -- NOTES:
+            -- This function prints an individual weapon in readable format to the console with type, id and both 
+            -- coordinates. Useful for debugging purposes.
+            -------------------------------------------------------------------------------------------------*/
             public string ExtendedString()
             {
                 return "(ID:" + ID + " Type:" + Type + "," + X + "," + Z + ")";
             }
 
-            // Randomly Generate a type of gun
+            /*-------------------------------------------------------------------------------------------------
+            -- FUNCTION: GenGunType
+            --
+            -- DATE: April 11 2018
+            --
+            -- DESIGNER: Alfred Swinton
+            --
+            -- PROGRAMMER: Alfred Swinton
+            --
+            -- INTERFACE: byte GenGunType()	 	
+            --
+            -- RETURNS: 	byte	
+            --		the type of the gun a random value between 1 and 13
+            --
+            -- NOTES:
+            -- Uses Random to determine the type of the gun possible types are between 1 and 13.
+            -------------------------------------------------------------------------------------------------*/
             private byte GenGunType()
             {
                 // Randomly seeded values
@@ -308,13 +579,47 @@ namespace InitGuns
             }
         }
 
-        // Check if a certain set of spaces is occupied
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: OccupiedCheck
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: bool OccupiedCheck(WeaponSpell genC, list<WeaponSpell> Occupied)	 	
+        --			WeaponSpell genC: an individual weapon, list<WeaponSpell> Occupied : a list of 
+        --				weapons that occupy spaces
+        --
+        -- RETURNS: bool
+        -- 		a boolean value whether or not the weapon which was inputed values have been occupied. 	
+        -- NOTES:
+        -- This function takes a weapon and return true or false based on whether the coordinates of that weapon are --  already occupied in an occupiedspaces list.
+        -------------------------------------------------------------------------------------------------*/
         public static bool OccupiedCheck(WeaponSpell genC, List<WeaponSpell> Occupied)
         {
             return Occupied.Contains(genC);
         }
 
-        // Takes a Weapon Object and puts it into byte array format
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: PutWeaponIntoBytes(WeaponSpell Weapon)
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: byte[] PutWeaponIntoBytes(WeaponSpell Weapon)	 	
+        --			WeaponSpell Weapon: a weapon object with coordinates, type, id
+        -- RETURNS: byte[]		
+        --		an individual weapon converted into byte form
+        --
+        -- NOTES:
+        -- This function converts individual weapon objects into bytes used aggregately to create a byte array in 
+        -- getByteArray function.
+        -------------------------------------------------------------------------------------------------*/
         public static byte[] PutWeaponIntoBytes(WeaponSpell Weapon)
         {
             byte[] wpn = new byte[R.Init.INDWPNPCKT];
@@ -335,7 +640,25 @@ namespace InitGuns
             return wpn;
         }
 
-        // Gets a weapon type from a bytearray format weapon
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: GetWeaponFromBytes
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: WeaponSpell GetWeaponFromBytes(byte[] weaponinbytes)	 	
+        --			byte[] weaponinbytes : an individual weapon in byte array format 1 byte type, 4 bytes ID, -- 				4 byte X coordinate, 4 bytes Z coordinate
+        --
+        -- RETURNS: WeaponSpell 
+        --			An individual weapon object containing coordinates, type, id		
+        --
+        -- NOTES:
+        -- This function takes a byte array the length of a single weapon and converts it into an object. Used in 
+        -- fromByteArraytoList to convert byte array to a list of weapons.
+        -------------------------------------------------------------------------------------------------*/
         public WeaponSpell GetWeaponFromBytes(byte[] weaponinbytes)
         {
             WeaponSpell Weapon = new WeaponSpell();
@@ -348,7 +671,25 @@ namespace InitGuns
             return Weapon;
         }
 
-        // Generates a number of guns depending on the number of players
+        /*-------------------------------------------------------------------------------------------------
+        -- FUNCTION: numberOfWeapons
+        --
+        -- DATE: April 11 2018
+        --
+        -- DESIGNER: Alfred Swinton
+        --
+        -- PROGRAMMER: Alfred Swinton
+        --
+        -- INTERFACE: int numberOfWeapons(int players) 	
+        --			int players: number of players			
+        --
+        -- RETURNS: 	int
+        --			the number of weapons to be generated
+        --
+        -- NOTES:
+        -- This function calculates the number of weapons to be generated by using the number of players multiplied 
+        -- by a weapon multiplier constant.
+        -------------------------------------------------------------------------------------------------*/
         public static int numberOfWeapons(int players)
         {
             return players * R.Init.PLAYERMULT;
