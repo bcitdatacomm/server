@@ -70,7 +70,6 @@ class Server
         mutex.WaitOne();
         running = true;
         mutex.ReleaseMutex();
-
         sendThread.Start();
         recvThread.Start();
         gameThread.Start();
@@ -127,7 +126,7 @@ class Server
                             {
                                 continue;
                             }
-                            if (bullet.Value.isColliding(player.Value.x, player.Value.z, R.Game.Players.RADIUS))
+                            if (bullet.Value.IsColliding(player.Value.x, player.Value.z, R.Game.Players.RADIUS))
                             {
                                 // Subtract health
                                 if (player.Value.h < bullet.Value.Damage)
@@ -632,7 +631,6 @@ class Server
         // Close client TCP socket
         tcpServer.CloseClientSocket(sockfd);
     }
-
 
     private static void LogError(String s)
     {

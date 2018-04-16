@@ -164,9 +164,6 @@ public class DangerZone
                 phaseEntered = false;
             }
 
-            //Console.WriteLine(dangerZoneRadius + " -= (" + fullRad + " * " + ratioToShrink + ") / (" + timeUnitToShrink + "/ 1000)");
-            //Console.WriteLine(dangerZoneX + " += " + distToNewX + " / (" + timeUnitToShrink + " / 1000)");
-            //Console.WriteLine(dangerZoneZ + " += " + distToNewZ + " / (" + timeUnitToShrink + " / 1000)");
             dangerZoneRadius -= ((fullRad * ratioToShrink) / (timeUnitToShrink / 1000)); // the division for converting the time unit to sec
             if (dangerZoneRadius < 0)
 			{
