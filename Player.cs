@@ -45,7 +45,7 @@ public class Player
 
     DESIGNER:	Benny Wang
 
-    PROGRAMMER:	Benny Wang, Li-Yan Tong
+    PROGRAMMER:	Benny Wang
 
     INTERFACE:	Player(EndPoint ep, byte id, float x, float z)
 					EndPoint ep: The networking enpdoint of the player.
