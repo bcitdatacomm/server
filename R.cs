@@ -1,3 +1,19 @@
+/*---------------------------------------------------------------------------------------
+--	SOURCE FILE:	R.cs
+--
+--	PROGRAM:		server
+--
+--	DATE:			Feb 18, 2018
+--
+--	REVISIONS:		Mar 27, 2018 - Refactored offsets for new packets
+--
+--	DESIGNERS:		Alfred Swinton, Benny Wang
+--
+--	PROGRAMMER:	    Alfred Swinton, Haley Booker, Benny Wang
+--
+-- NOTES:
+-- This is a file full of constants for use in various places in both server and client.
+---------------------------------------------------------------------------------------*/
 using System;
 
 namespace R
