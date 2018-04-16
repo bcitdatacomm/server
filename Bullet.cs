@@ -3,9 +3,9 @@ SOURCE FILE: 	Bullet.cs
 
 PROGRAM:		server
 
-FUNCTIONS:		Bullet()
+FUNCTIONS:		Bullet (int id, byte type, Player player)
 				Update()
-				IsColliding()
+				IsColliding(float x, float z, float r)
 
 DATE:			Mar. 14, 2018
 
